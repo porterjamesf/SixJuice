@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewBag.Title</title>
+    @Styles.Render("~/Content/SJ.css")
+</head>
+<body ondragstart="return false;" ondrop="return false;">
+    @Scripts.Render("~/bundles/jquery")
+
+    <div class="SJBody wide tall">
+        @RenderBody()
+    </div>
+    <div class="SJNav">
+        <button class="SJNavButton">
+            <span class="SJIcon-bar"></span>
+            <span class="SJIcon-bar"></span>
+            <span class="SJIcon-bar"></span>
+        </button>
+    </div>
+    <div class="SJMenu">
+        <div class="vert10 medText menuTitle">SixJuice</div>
+        <span class="sidepad"></span>
+        <button class="menuItem sidepadsandwich smallText" id="home">Home</button>
+        <span class="sidepad"></span>
+        <button class="menuItem sidepadsandwich smallText" id="rules">Rules</button>
+        <span class="sidepad"></span>
+        <button class="menuItem sidepadsandwich smallText" id="about">About</button>
+    </div>
+
+    <script src="Scripts/jquery-1.10.2.min.js"></script>
+    <script src="~/Scripts/jquery.signalR-2.2.0.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+
+    <script type="text/javascript">
+        $(function () {
+            menuOpen = false;
+
+            openMenu = function () {
+                if (!menuOpen) {
+                    menuOpen = true;
+                    $('.SJMenu').addClass("tall");
+                    $('.SJNavButton').addClass("SJNavButtonHighlight");
+                    $('.SJIcon-bar').addClass("SJIcon-barHighlight");
+                }
+            }
+            closeMenu = function () {
+                if (menuOpen) {
+                    menuOpen = false;
+                    $('.SJMenu').removeClass("tall");
+                    $('.SJNavButton').removeClass("SJNavButtonHighlight");
+                    $('.SJIcon-bar').removeClass("SJIcon-barHighlight");
+                }
+            }
+            $('.SJNavButton').click(function () {
+                if (!menuOpen) {
+                    history.pushState({ screen: "menu", sub: "main" }, "Main menu", window.location);
+                    openMenu();
+                } else {
+                    pushCurrentState();
+                    closeMenu();
+                }
+            });
+            $('#home').click(function () {
+                console.log("home");
+            });
+            $('#rules').click(function () {
+                console.log("rules");
+            });
+            $('#about').click(function () {
+                console.log("about");
+            });
+
+            window.addEventListener('popstate', function (e) {
+                console.log(e.state);
+                if (e.state != null && e.state.screen == "menu") {
+                    openMenu();
+                } else {
+                    if (menuOpen) {
+                        closeMenu();
+                    } else {
+                        firePopstate(e);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+﻿
+@{
+    ViewBag.Title = "SixJuice - " + ViewBag.RoomCode + " - " + ViewBag.PlayerName;
+    Layout = "~/Views/Shared/_SJLayout.cshtml";
+}
+
+<div class="wide tall gameboard">
+    <div id="top" class="boardrow">
+        <span id="drawpile" class="deck"></span>
+        <span id="table" class="cardBar post1deck" data-preferredwidth="260"> </span>
+    </div>
+    <div id="thisPlayer" class="boardrow row1">
+        <span id="pointCardPile" class="deck"></span>
+        <span id="normalCardPile" class="deck post1deck"></span>
+        <span id="hand" class="cardBar post2decks" data-preferredwidth="160"></span>
+    </div>
+    <div id="players">
+
+    </div>
+    <div id="buttons">
+
+    </div>
+</div>
+
+<div id="wait" class="wide tall overlay">
+    <div class="vert10"></div>
+    <div>
+        <span class="sidepad"></span>
+        <span class="sidepadsandwich overlayContent vert80">
+            <span class="medText spiv">Waiting for players:</span>
+            <span id="waitList"></span>
+
+        </span>
+    </div>
+</div>
+
+<script src="~/Scripts/game.js"></script>
+<script type="text/javascript">
+    getRoomCode = function () {
+        return "@ViewBag.RoomCode";
+    }
+    getPlayerName = function () {
+        return "@ViewBag.PlayerName";
+    }
+</script>
+

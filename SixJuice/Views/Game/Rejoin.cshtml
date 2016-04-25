@@ -1,0 +1,67 @@
+﻿
+@{
+    ViewBag.Title = "SixJuice - Rejoin - " + ViewBag.RoomCode;
+    Layout = "~/Views/Shared/_SJLayout.cshtml";
+}
+
+<div class="vert10"></div>
+<div class="wide vert10">
+    <span class="sidepad"></span>
+    <span class="medText">Room code:</span>
+</div>
+<div class="wide vert20">
+    <span class="sidepad"></span>
+    <span class="bigText">@ViewBag.RoomCode</span>
+</div>
+<div class="vert5"></div>
+<div class="vert60" id="playerList">
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        hub = $.connection.sixJuiceHub;
+        roomCode = "@ViewBag.RoomCode";
+        playerInfo = null;
+
+        //Identify - called upon reconnect. For this page, does nothing
+        hub.client.identify = function () { }
+
+        hub.client.playersReady = function (players) {
+            playerInfo = JSON.parse(players);
+
+            if (playerInfo.length == 0) {
+                window.location.href = getBaseURL().concat('/Start/?roomCode=', roomCode, '&message=This game is full.');
+            }
+            if (playerInfo.length == 1) {
+                window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', playerInfo[0].playerName);
+            }
+
+            $('#playerList').empty();
+            for(i = 0; i < playerInfo.length; i++) {
+                if(!playerInfo[i].ready) {
+                    $('#playerList').append('<div><span class="sidepad"></span><button class="medText sidepadsandwich rejoinButton">'.concat(playerInfo[i].playerName, '</button></div>'));
+                }
+            }
+        }
+
+        //Helper for URL construction
+        getBaseURL = function () {
+            pathArray = location.href.split('/');
+            protocol = pathArray[0];
+            host = pathArray[2];
+            return protocol.concat('//', host);
+        }
+
+        $.connection.hub.start().done(function () {
+            //Initial room rejoin - registers this connection for updates & gets player list
+            hub.server.rejoin(roomCode);
+
+            $('#playerList').on('click', '.rejoinButton', function () {
+                console.log("Click");
+                console.log($(this));
+                window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', $(this).text());
+            });
+        });
+    });
+</script>
+

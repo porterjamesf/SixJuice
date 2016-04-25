@@ -1,0 +1,116 @@
+﻿
+@{
+    ViewBag.Title = "SixJuice";
+    Layout = "~/Views/Shared/_SJLayout.cshtml";
+}
+
+<div class="vert10 wide"></div>
+<div class="titleBox wide vert20 bigText">
+    SixJuice
+</div>
+<div class="vert5">
+    <span class="sidepad"></span>
+    <span class="smallText" id="roomCodeLabel">Enter room code:</span>
+</div>
+<div class="vert10">
+    <span class="sidepad"></span>
+    <span class="tall">
+        <input id="roomCodeValue" type="text" class="sidepadsandwich medText tall" value="@ViewBag.InitRoomCode"/>
+    </span>
+</div>
+<div class="vert50">
+    <div class="vert10"></div>
+    <div class="vert20">
+        <span class="sidepad"></span>
+        <button id="joinButton" class="tall sidepadsandwich medText" disabled="">JOIN</button>
+    </div>
+    <div class="vert10"></div>
+    <div class="vert20">
+        <span class="sidepad"></span>
+        <button id="newButton" class="tall sidepadsandwich medText">NEW GAME</button>
+    </div>
+    <div class="vert10"></div>
+    <div class="vert20">
+        <span class="sidepad"></span>
+        <span id="message" class="tall sidepadsandwich smallText"></span>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(function () {
+        var hub = $.connection.sixJuiceHub;
+
+        $('#roomCodeValue').focus();
+
+        //Room join/creation callback function
+        hub.client.goToRoomAs = function (roomCode, playerNumber) {
+            window.location.href = '../Start/Room/?roomCode='.concat(roomCode, '&playerNumber=', playerNumber);
+        }
+
+        //Game rejoin callback - for joingin game-in-progress where multiple players are missing
+        hub.client.goToRejoin = function (roomCode) {
+            window.location.href = getBaseURL().concat('/Game/Rejoin?roomCode=', roomCode);
+        }
+
+        //No such game - callback for bad room code
+        hub.client.noSuchGame = function () {
+            message("No room exists with this code.", true);
+        }
+
+        //No missing players - callback for trying to join game-in-progress where all players are present
+        hub.client.noMissingPlayers = function () {
+            message("This game is full.", true);
+        }
+
+        //Identify - called upon reconnect. For this page, does nothing
+        hub.client.identify = function () { }
+
+        //Room code validation
+        oldtext = "";
+        $('#roomCodeValue').on("change keyup paste", function () {
+            text = $(this).val().toUpperCase();
+            if (/^[A-Z0-9]{0,4}$/.test(text)) {
+                $(this).val(text);
+                oldtext = text;
+            } else {
+                $(this).val(oldtext);
+            }
+            $('#joinButton').prop('disabled', $(this).val().length != 4);
+        });
+
+        if ("@ViewBag.InitMessage" != "") {
+            message("@ViewBag.InitMessage", true);
+        }
+
+        //Writes message to bottom of page
+        message = function (text, isError) {
+            if (isError) {
+                $('#message').addClass("errorText");
+            } else {
+                $('#message').removeClass("errorText");
+            }
+            $('#message').text(text);
+        }
+
+        //Helper for URL construction
+        getBaseURL = function () {
+            pathArray = location.href.split('/');
+            protocol = pathArray[0];
+            host = pathArray[2];
+            return protocol.concat('//', host);
+        }
+
+        $.connection.hub.start().done(function () {
+            $('#joinButton').click(function () {
+                $()
+                message("Finding game...", false);
+                hub.server.clickJoin($('#roomCodeValue').val());
+            });
+            $('#newButton').click(function () {
+                message("Making new game...", false);
+                hub.server.newGame();
+            });
+        });
+    });
+</script>
+
