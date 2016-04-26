@@ -175,29 +175,25 @@
 }
 
 .gameboard {
-    overflow-y:auto;
-    position: absolute;
-    padding: 15px;
+    position: relative;
+    overflow: auto;
 }
 
 .deck {
-    width: 85px;
-    height: 98px;
-    background-color: #666666;
-    position: relative;
-    margin: 10px;
+    /*background-color: #666666;*/
+    position: absolute;
 }
 
 .cardBar {
-    margin: 10px;
-    position:relative;
+    position: absolute;
+}
+
+.king {
+    position: absolute;
 }
 
 .card {
     position: absolute;
-    width: 70px;
-    height: 98px;
-    background-size: 70px 98px;
     border: 1px solid #666666;
     border-radius: 3px;
     top: 0px;
@@ -205,39 +201,16 @@
 
 .emptyCard {
     position: absolute;
-    width: 70px;
-    height: 98px;
     border: 1px dotted #999999;
     border-radius: 3px;
     left: 15px;
-    top: 0px;
+    top: 15px;
 }
 
 .cardSelected {
     top: -12px;
 }
 
-.spell {
-
-}
-
-.post1deck {
-    left: 85px;
-}
-
-.post2decks {
-    left: 170px;
-}
-
 .boardrow {
-    position: absolute;
-    padding: 10px;
-}
-
-.row1 {
-    top: 150px;
-}
-
-.row2 {
-    top: 300px;
+    position: relative;
 }

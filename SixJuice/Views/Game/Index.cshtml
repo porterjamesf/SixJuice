@@ -4,18 +4,20 @@
     Layout = "~/Views/Shared/_SJLayout.cshtml";
 }
 
-<div class="wide tall gameboard">
+<div class="gameboard">
     <div id="top" class="boardrow">
         <span id="drawpile" class="deck"></span>
-        <span id="table" class="cardBar post1deck" data-preferredwidth="260"> </span>
-    </div>
-    <div id="thisPlayer" class="boardrow row1">
-        <span id="pointCardPile" class="deck"></span>
-        <span id="normalCardPile" class="deck post1deck"></span>
-        <span id="hand" class="cardBar post2decks" data-preferredwidth="160"></span>
+        <span id="table" class="cardBar"> </span>
     </div>
     <div id="players">
+        <div id="ThisPlayer" class="boardrow">
+            <span id="pointCardPile" class="deck"></span>
+            <span id="normalCardPile" class="deck normalCardPile"></span>
+            <span id="hand" class="cardBar hand"></span>
+            <span id="kings" class="kings">
 
+            </span>
+        </div>
     </div>
     <div id="buttons">
 

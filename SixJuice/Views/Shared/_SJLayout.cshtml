@@ -9,7 +9,7 @@
 <body ondragstart="return false;" ondrop="return false;">
     @Scripts.Render("~/bundles/jquery")
 
-    <div class="SJBody wide tall">
+    <div class="SJBody">
         @RenderBody()
     </div>
     <div class="SJNav">
@@ -84,6 +84,21 @@
                     }
                 }
             });
+
+            resizeBody = function (width, height) {
+                $('body').css("width", width - 1);
+                $('body').css("height", height - 1);
+                $('.SJBody').css("width", width - 1);
+                $('.SJBody').css("height", height - 1);
+            }
+
+            $(document).ready(function () {
+                resizeBody(window.innerWidth, window.innerHeight);
+
+                $(window).resize(function () {
+                    resizeBody(window.innerWidth, window.innerHeight);
+                })
+            })
         });
     </script>
 </body>
