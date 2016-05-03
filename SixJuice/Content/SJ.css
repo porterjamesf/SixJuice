@@ -11,6 +11,20 @@
     pointer-events: none;
 }
 
+.actionButtonOverlay {
+    position: absolute;
+    height: 98%;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.notYourTurn {
+    position: absolute;
+    z-index: 100;
+    pointer-events: none;
+    background-color: rgba(10, 0, 10, 0.09);
+}
+
 .SJNavButton {
     float: right;
     height: 3.5em;
@@ -20,6 +34,14 @@
     padding: 4px;
     border-radius: 10%;
     pointer-events: visible;
+    z-index: 200;
+}
+
+.actionButtons {
+    width: 98%;
+    /*margin: 10px;*/
+    position: absolute;
+    bottom: 0;
 }
 
 .SJNavButtonHighlight {
@@ -68,7 +90,7 @@
 .overlay {
     position:absolute;
     background-color:rgba(0, 0, 0, 0.3);
-    z-index: 100;
+    z-index: 125;
 }
 
 .overlayContent {
@@ -213,4 +235,12 @@
 
 .boardrow {
     position: relative;
+}
+
+.actionButton {
+    vertical-align: middle;
+    display: inline-block;
+    font-size: 1.2em;
+    font-weight: 400;
+    pointer-events: visible;
 }

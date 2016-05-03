@@ -110,7 +110,7 @@ namespace SixJuice.Database
                 PointCards = new List<Card>(),
                 NormalCards = new List<Card>(),
                 Hand = new List<Card>(),
-                Spells = new List<List<Card>>()
+                Kings = new List<List<Card>>()
             };
             var update = Builders<Game>.Update.Push("Players", player);
             var result = await games.UpdateOneAsync(getFilter(roomCode), update);
@@ -159,11 +159,93 @@ namespace SixJuice.Database
 
         #region Game Play
 
-        public async Task IncreaseTurn(string roomCode)
+        //Updates the value of Turn and draws cards for new active player
+        public async Task<NewTurn> SetTurn(string roomCode, int value)
         {
-            var update = Builders<Game>.Update.Inc("Turn", 1);
+            var game = await GetGame(roomCode);
+            var update = Builders<Game>.Update.Set("Turn", value);
+            NewTurn newTurn = new NewTurn
+            {
+                nextPlayerName = game.Players[value].Name,
+                drawnCards = new List<Card>()
+            };
+            if (game.Turn != -1)
+            {
+                int cardsToDraw = 4 - game.Players[value].Hand.Count;
+                for (int i = 0; i < cardsToDraw; i++)
+                {
+                    if (i < game.Deck.Count)
+                    {
+                        Card card = game.Deck.ElementAt(i);
+                        update = update.Pull("Deck", card).Push("Players." + value + ".Hand", card);
+                        newTurn.drawnCards.Add(card);
+                    }
+                }
+            }
             await games.UpdateOneAsync(getFilter(roomCode), update);
+            return newTurn;
         }
+
+        //var update = Builders<Game>.Update.PullFilter("Players", Builders<Player>.Filter.Eq("Name", playerName));
+
+        //Performs card move, turn update, and draws cards for next player
+        public async Task<NewTurn> Discard(string roomCode, string playerName, Card discard)
+        {
+            var game = await GetGame(roomCode);
+            //Moving discarded card from player's hand
+            var builder = Builders<Game>.Filter;
+            var filterThisPlayer = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
+            var updateThisPlayerHand = Builders<Game>.Update.Pull("Players.$.Hand", discard);
+            //BsonDocument.Parse("{ number : " + discard.number + ", suit : \"" + discard.suit + "\"}")
+
+            //Moving discarded card to table and changing turn to next player's turn
+            int nextPlayer = (game.Turn + 1) % game.Players.Count;
+            var update = Builders<Game>.Update.Set("Turn", nextPlayer).Push("Table", discard);
+            NewTurn newTurn = new NewTurn
+            {
+                nextPlayerName = game.Players[nextPlayer].Name,
+                drawnCards = new List<Card>()
+            };
+            //Drawing new cards
+            int cardsToDraw = 4 - game.Players[nextPlayer].Hand.Count;
+            var filterNextPlayer = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", newTurn.nextPlayerName);
+            UpdateDefinition<Game> updateNextPlayerHand = null;
+            for (int i = 0; i < cardsToDraw; i++)
+            {
+                if (i < game.Deck.Count)
+                {
+                    Card card = game.Deck.ElementAt(i);
+                    update = update.Pull("Deck", card);
+                    newTurn.drawnCards.Add(card);
+                    if(updateNextPlayerHand == null)
+                    {
+                        updateNextPlayerHand = Builders<Game>.Update.Push("Players.$.Hand", card);
+                    } else
+                    {
+                        updateNextPlayerHand = updateNextPlayerHand.Push("Players.$.Hand", card);
+                    }
+                }
+            }
+            await games.UpdateOneAsync(getFilter(roomCode), update);
+            await games.UpdateOneAsync(filterThisPlayer, updateThisPlayerHand);
+            if(updateNextPlayerHand != null)
+            {
+                await games.UpdateOneAsync(filterNextPlayer, updateNextPlayerHand);
+            }
+            return newTurn;
+        }
+
+        public async Task Take(string roomCode, string playerName, List<Card> fromHand, List<Card> fromTable) { }
+
+        public async Task PlayKing(string roomCode, string playerName, Card king) { }
+
+        public async Task PlayQueen(string roomCode, string playerName, Card queen) { }
+
+        public async Task PlayJackOfClubs(string roomCode, string playerName, string queenPlayerName, Card queen) { }
+
+        public async Task PlayJackOfSpades(string roomCode, string playerName, string victimName) { }
+
+        public async Task UseForKing(string roomCode, string playerName, string source, List<List<Card>> cards, List<Card> kings) { }
 
         #endregion
 
@@ -192,6 +274,11 @@ namespace SixJuice.Database
             return builder.Eq("PlayerName", playerName) & builder.Eq("RoomCode", roomCode);
         }
 
+        private FilterDefinition<ConnectedPlayer> getCPFbyRoom(string roomCode)
+        {
+            return Builders<ConnectedPlayer>.Filter.Eq("RoomCode", roomCode);
+        }
+
         public async Task<ConnectedPlayer> GetConnectedPlayer(string connectionId)
         {
             var result = (await connectedPlayers.FindAsync(getCPFbyId(connectionId))).ToList();
@@ -204,6 +291,25 @@ namespace SixJuice.Database
                 throw new NoSuchPlayerException("There are no connections with this connectionId");
             }
             return result.Single();
+        }
+
+        public async Task<string> GetConnectedPlayerId(string roomCode, string playerName)
+        {
+            var result = (await connectedPlayers.FindAsync(getCPFbyName(playerName, roomCode))).ToList();
+            if (result.Count > 1)
+            {
+                throw new DuplicatePlayerException("This connectionId is registered for multiple connections");
+            }
+            if (result.Count == 0)
+            {
+                throw new NoSuchPlayerException("There are no connections with this connectionId");
+            }
+            return result.Single().ConnectionId;
+        }
+
+        public async Task<List<ConnectedPlayer>> GetConnectedPlayers(string roomCode)
+        {
+            return (await connectedPlayers.FindAsync(getCPFbyRoom(roomCode))).ToList();
         }
 
         private async Task update(ConnectedPlayer player, string roomCode = null)

@@ -9,7 +9,7 @@ namespace SixJuice.Models
     {
         public string PlayerName { get; set; }
         public int HandCount { get; set; }
-        public List<List<Card>> Spells { get; set; }
+        public List<List<Card>> Kings { get; set; }
         public int PointCardCount { get; set; }
         public FacingDeck NormalCards { get; set; }
     }

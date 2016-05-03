@@ -10,9 +10,10 @@ namespace SixJuice.Models
         //Global
         public int DeckCount { get; set; }
         public List<Card> Table { get; set; }
+        public string WhosTurn { get; set; }
         //This player
         public List<Card> Hand { get; set; }
-        public List<List<Card>> Spells { get; set; }
+        public List<List<Card>> Kings { get; set; }
         public int PointCardCount { get; set; }
         public FacingDeck NormalCards { get; set; }
         //Other players

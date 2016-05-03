@@ -101,6 +101,13 @@
     getCardId = function (number, suit) {
         return "" + suit + convert(number);
     }
+    //Opposites
+    getCardNumber = function (cardId) {
+        return parseInt(cardId.substring(cardId.length - 2, cardId.length), 10);
+    }
+    getCardSuit = function (cardId) {
+        return cardId.substring(0, cardId.length - 2);
+    }
 
     //Loads up the appropriate card image to the card element with the specified id
     // Card id's should match the image names.
@@ -110,6 +117,8 @@
             imagePath = '"../../Content/Images/deckfronts/' + id + '.png"';
         }
         $('#' + id).css("background-image", 'url(' + imagePath + ')');
+        setSize('#' + id, cardwidths[size], cardheights[size]);
+        $('#' + id).css("background-size", "" + cardwidths[size] + "px " + cardheights[size] + "px");
     }
     removeCardGraphic = function (id) {
         $('#' + id).css("background-image", "");
@@ -118,7 +127,7 @@
     //Helpers for getting coordinates relative to element mouse event occured on, in same
     // coordinate space as the sub-elements' (cards') left and top positions
     relX = function (event, element) {
-        return event.clientX - element.position().left - pagemargins[size];
+        return event.clientX - element.position().left - pagemargins[size] + $('.gameboard').scrollLeft();
     }
     relY = function (event, element) {
         return event.clientY - element.position().top - pagemargins[size];
@@ -138,8 +147,8 @@
     dragMinimum = 5; //Minimum number of pixels mouse must move while down to be a drag
 
     //-----GLOBAL GRAPHICS PARAMETERS-----
-    //All sizes based off of card widths: set freely (any number)
-    cardwidths = [50, 70, 110, 180];
+    //All sizes based off of card widths: set freely (any number). Graphic max size is 180. Recommended min is 50.
+    cardwidths = [50, 60, 72, 87, 104, 125, 150, 180];
     //Other sizing arrays are calculated
     cardwidthmins = [];     //Minimum card width (just side number/suit)
     cardheights = [];       //Height of card
@@ -152,7 +161,8 @@
     handmaxs = [];          //Largest size of a hand (4 full cards & 3 card margins)
     rowmargins = [];        //Margin between rows (top, each player)
     calcedHandWidth = 0;    //Actual size alloted to hands (calced based on screen width and size)
-    buttonwidthmins = [];   //Minimum width of action buttons
+    buttonWidthMaxs = [];   //Maximum width of action buttons
+    buttonWidth = 0;        //Actual calculated button width (may be less when many actions are enabled)
     buttonheights = [];     //Height of action buttons
     pagemargins = [];       //Margin on page outer border
     widthbreakpoints = [];  //Width minimums for each size
@@ -168,7 +178,7 @@
         handmins[i] = 2 * cardwidths[i] + 2 * cardwidthmins[i];
         handmaxs[i] = 4 * cardwidths[i] + 3 * cardmargins[i];
         rowmargins[i] = 0.08 * cardwidths[i];
-        buttonwidthmins[i] = cardheights[i];
+        buttonWidthMaxs[i] = 1.2 * cardheights[i];
         buttonheights[i] = 0.8 * cardwidths[i];
         pagemargins[i] = Math.min(10, 0.12 * cardwidths[i]);
         widthbreakpoints[i] = 2 * deckwidths[i] + handmins[i] + 0.5 * cardwidths[i] + 3 * standardmargins[i];
@@ -184,6 +194,7 @@
         //Set size of window
         width = wid - 2 * pagemargins[size] - 1;
         height = hei - 2 * pagemargins[size] - 1;
+        setSize('.notYourTurn', wid - 1, hei - 1);
         setSize('.gameboard', width, height);
         $('.gameboard').css("padding", pagemargins[size]);
         //Find sizing index
@@ -201,7 +212,7 @@
         setSize('.deck', deckwidths[size], deckheights[size]);
         $('.cardBar').css("top", deckmargins[size] + rowmargins[size]);
         $('.cardBar').css("height", cardheights[size]);
-        $('.kings').css("top", deckmargins[size] + rowmargins[size]);
+        $('.king').css("top", deckmargins[size] + rowmargins[size]);
         $('.boardrow').css("height", deckheights[size]);
         $('.boardrow').css("padding", rowmargins[size]);
         //Set element positions
@@ -214,24 +225,71 @@
         calcedHandWidth = Math.max(handmins[size], Math.min(handmaxs[size], width - xcursor - standardmargins[size] - 0.5 * cardwidths[size]));
         $('.hand').css("width", calcedHandWidth);
         e('table').css("width", calcedHandWidth + cardwidths[size] + cardmargins[size]);
-
         calculateKingAndPlayerWidths();
 
         drawables.forEach(function (drawable, index) {
             drawable.redraw();
         });
+
+        //Action buttons - at end so that we can grab scrollwidth after all the gameboard elements have their positions set
+        //setSize('.actionButtons', document.getElementsByClassName('gameboard')[0].scrollWidth, buttonheights[size] + standardmargins[size]);
+        setSize('.actionButtons', width, buttonheights[size] + 2 * standardmargins[size]);
+        //$('.actionButtons').css("height", buttonheights[size] + 2 * standardmargins[size]);
+        $('#buttonSpace').css("height", buttonheights[size] + 2 * standardmargins[size]);
+        calculateButtonWidth();
+        $('.actionButton').css("height", buttonheights[size]);
+        $('.actionButton').css("margin", standardmargins[size] + "px");
     }
     calculateKingAndPlayerWidths = function () {
-        if (playerInfo != null) {
-            for (var i = 0; i < playerInfo.length; i++) {
-                var xcursor = rowmargins[size] + 2 * deckwidths[size] + 3 * standardmargins[size] + calcedHandWidth;
-                numKings = $('#' + playerInfo[i].playerName + 'Kings .king').length;
-                for (var j = 1; j <= numKings; j++) {
-                    $('#' + playerInfo[i].playerName + 'Kings span:nth-child(' + j + ')').css("left", xcursor);
-                    xcursor += cardwidths[size] + standardmargins[size];
-                }
-                e(playerInfo[i].playerName).css("width", xcursor);
+        var amalgKings = [kings];
+        for (var i = 0; i < otherPlayers.length; i++) {
+            amalgKings.push(otherPlayers[i].kings);
+        }
+        for (var i = 0; i < amalgKings.length; i++) {
+            var xcursor = rowmargins[size] + 2 * deckwidths[size] + 3 * standardmargins[size] + calcedHandWidth;
+            for (var j = 0; j < amalgKings[i].kings.length; j++) {
+                e(amalgKings[i].kings[j].id).css("left", xcursor);
+                xcursor += cardwidths[size] + cardwidthmins[size] * amalgKings[i].kings[j].cardList.length + standardmargins[size];
             }
+        }
+    }
+
+    //----ACTION BUTTON MANAGEMENT----
+
+    enableAction = function (action) {
+        e(action).show();
+        calculateButtonWidth();
+    }
+    disableAction = function (action) {
+        e(action).hide();
+        calculateButtonWidth();
+    }
+    clearActions = function () {
+        var actions = $('.actionButtons button');
+        for (var i = 0; i < actions.length; i++) {
+            disableAction(actions[i].id);
+        }
+    }
+    calculateButtonWidth = function () {
+        var actions = $('.actionButtons button');
+        var enabledActionCount = 0;
+        for (var i = 0; i < actions.length; i++) {
+            if (!e(actions[i].id).css("display") == "none") {
+                enabledActionCount += 1;
+            }
+        }
+        buttonWidth = Math.min((width - 20) / enabledActionCount - 2 * standardmargins[size], buttonWidthMaxs[size]);
+        $('.actionButton').css("width", buttonWidth);
+    }
+
+    //--------TURN----------
+
+    updateTurn = function () {
+        if (whosTurn == playerName) {
+            $('.notYourTurn').hide();
+        } else {
+            $('.notYourTurn').show();
+            $('.cardSelected').removeClass('cardSelected');
         }
     }
 
@@ -264,7 +322,7 @@
                 if (this.cardList.length > 0) {
                     var idOfNewTop = this.cardList[this.cardList.length - 1];
                     var isFront = (idOfNewTop.substring(0, 8) != "deckfill");
-                    addCardGraphic(idOfNewtop, isFront);
+                    addCardGraphic(idOfNewTop, isFront);
                 } else {
                     e(this.id).append(getCardHole());
                 }
@@ -324,7 +382,7 @@
         }
 
         e(this.id).on('mouseup', (function (event) {
-            //Click on deck -- for cat
+            //Click on deck -- for jack of spades
             // May be replaced with overlay
         }).bind(this));
     }
@@ -356,6 +414,11 @@
 
             this.redraw();
         }
+        // Adds a generic (non-facing) card to end of list
+        this.pushBlankCard = function () {
+            var cardId = this.id + "c" + this.cardList.length;
+            this.pushCard(cardId);
+        }
         // Removes specific card from list
         this.removeCard = function (cardId) {
             //Removes card element from DOM
@@ -364,9 +427,15 @@
             index = this.cardList.indexOf(cardId);
             this.cardList.splice(index, 1);
             //Readjusts scroll position if necessary
-            this.pos = Math.min(cardList.length - 2, this.pos);
+            this.pos = Math.min(this.cardList.length - 2, this.pos);
 
             this.redraw();
+        }
+        // Removes whatever the top card is
+        this.popCard = function () {
+            if (this.cardList.length > 0) {
+                this.removeCard(this.cardList[this.cardList.length - 1]);
+            }
         }
         // Selects/unselects specific card
         this.toggleSelectCard = function (cardId) {
@@ -376,6 +445,17 @@
             } else {
                 cardE.addClass("cardSelected");
             }
+            updateActions();
+        }
+        // Returns list of selected cards
+        this.getSelected = function () {
+            var result = [];
+            this.cardList.forEach(function (cardID, index) {
+                if (e(cardID).hasClass("cardSelected")) {
+                    result.push(cardID);
+                }
+            });
+            return result;
         }
         // Adds group of cards to list
         this.import = function (cards) {
@@ -482,6 +562,7 @@
             //Stops mouse operation. For drags, that's the end of the story
             this.downat = -1;
             this.downpos = -1;
+            if (whosTurn != playerName) return; //Can't select cards if it's not your turn
             //Detects a click (on active card bars) and performs selection
             if (event.type == "mouseup" && !this.dragged && this.isActive) {
                 clickx = relX(event, e(this.id));
@@ -506,6 +587,122 @@
         }).bind(this));
     }
 
+    //Class for Kings
+    function King(id) {
+        this.id = id;
+        this.cardList = [];
+
+        this.pushCard = function (cardId) {
+            e(this.id).append(getCardDiv(cardId));
+            addCardGraphic(cardId, true);
+            this.cardList.push(cardId);
+
+            this.redraw();
+        }
+
+        this.redraw = function () {
+            for (var i = 1; i < this.cardList.length; i++) {
+                setPosition('#' + this.cardList[i], cardwidthmins[size] * i, deckmargins[size] * i * 0.5);
+            }
+            e(this.id).width(cardwidths[size] + cardwidths[size] * (this.cardList.length - 1));
+        }
+
+        this.import = function (cards) {
+            this._import(cards);
+            this.redraw();
+        }
+        this._import = function (cards) {
+            for (var i = 0; i < cards.length; i++) {
+                var cardId = getCardId(cards[i].number, cards[i].suit);
+                e(this.id).append(getCardDiv(cardId));
+                addCardGraphic(cardId, true);
+                this.cardList.push(cardId);
+            }
+        }
+
+        this.clear = function () {
+            this._clear();
+            this.redraw();
+        }
+        this._clear = function () {
+            e(this.id).empty();
+        }
+
+        this.clearAndImport = function (cards) {
+            this._clear();
+            this._import(cards);
+            this.redraw();
+        }
+    }
+
+    function Kings(id) {
+        this.id = id;
+        this.kings = [];
+
+        this.pushKing = function (kingId) {
+            //Make Id for king object & add element
+            var eId = this.id + '-' + kingId;
+            e(this.id).append('<span id="' + eId + '" class="king"></span>');
+            //Create king object
+            var newKing = new King(eId);
+            newKing.pushCard(kingId);
+            //Give new king object first card (the king)
+            this.kings.push(newKing);
+
+            this.redraw();
+        }
+
+        this.removeKing = function (kingId) {
+            //Remove element
+            var eId = this.id + '-' + kingId;
+            e(this.id).remove('#' + eId);
+            //Find index of king object and remove it from array
+            for (var i = 0; i < this.kings.length; i++) {
+                if (this.kings[i].id == eId) {
+                    this.kings.splice(i, 1);
+                    break;
+                }
+            }
+
+            this.redraw();
+        }
+
+        this.redraw = function () {
+            this.kings.forEach(function (king, index) {
+                king.redraw();
+            });
+        }
+
+        this.import = function (cardss) {
+            this._import(cardss);
+            this.redraw();
+        }
+        this._import = function (cardss) {
+            for (var i = 0; i < cardss.length; i++) {
+                var eId = this.id + '-' +  getCardId(cardss[i][0].number, cardss[i][0].suit);
+                e(this.id).append('<span id="' + eId + '" class="king"></span>');
+                var newKing = new King(eId);
+                newKing._import(cardss[i]);
+                this.kings.push(newKing);
+            }
+        }
+
+        this.clear = function () {
+            this._clear();
+            this.redraw();
+        }
+        this._clear = function () {
+            e(this.id).empty();
+            this.kings = [];
+        }
+
+        this.clearAndImport = function (cardss) {
+            this._clear();
+            this._import(cardss);
+            this.redraw();
+        }
+    }
+
     getCardBarContainerId = function (cardBarId) {
         switch (cardBarId) {
             case "table":
@@ -517,11 +714,25 @@
         }
     }
 
-    function OtherPlayer(name, pointCards, normalCards, hand) {
+    function OtherPlayer(name, pointCards, normalCards, hand, kings) {
         this.name = name;
         this.pointCardPile = pointCards;
         this.normalCardPile = normalCards;
         this.hand = hand;
+        this.kings = kings;
+    }
+
+    function GameAction(action, hand, table, misc) {
+        this.playerName = playerName;
+        this.action = action;
+        this.hand = hand;
+        this.table = table;
+        this.misc = misc;
+    }
+
+    function CardObj(cardId) {
+        this.number = getCardNumber(cardId);
+        this.suit = getCardSuit(cardId);
     }
 
     //----------GAME---------------
@@ -529,10 +740,12 @@
     //Game state variables
     drawpile = new Deck("drawpile");
     table = new CardBar("table", true);
+    whosTurn = "";
 
     pointCardPile = new Deck("pointCardPile");
     normalCardPile = new Deck("normalCardPile");
     hand = new CardBar("hand", true);
+    kings = new Kings("ThisPlayerKings");
 
     otherPlayers = [];
 
@@ -542,6 +755,7 @@
     drawables.push(pointCardPile);
     drawables.push(normalCardPile);
     drawables.push(hand);
+    drawables.push(kings);
 
     //Complete update of the board from the database
     hub.client.receivePlayerGameState = function (pgsdata) {
@@ -557,6 +771,10 @@
         }
         table.clearAndImport(gameTable);
 
+        //Turn
+        whosTurn = pgs.WhosTurn;
+        updateTurn();
+
         //This player
         pointCardPile.clearAndImport(pgs.PointCardCount, null);
         var normalTopCard = null;
@@ -569,6 +787,7 @@
             gameHand.push(getCardId(pgs.Hand[i].number, pgs.Hand[i].suit));
         }
         hand.clearAndImport(gameHand);
+        kings.clearAndImport(pgs.Kings);
 
         //Other players
         otherPlayers = [];
@@ -587,12 +806,14 @@
                     opName,
                     new Deck(opName + "PointCardPile"),
                     new Deck(opName + "NormalCardPile"),
-                    new CardBar(opName + "Hand", false)
+                    new CardBar(opName + "Hand", false),
+                    new Kings(opName + "Kings")
                 );
                 otherPlayers.push(op);
                 drawables.push(op.pointCardPile);
                 drawables.push(op.normalCardPile);
                 drawables.push(op.hand);
+                drawables.push(op.kings);
             } else {
                 for (var j = 0; j < otherPlayers.length; j++) {
                     if (otherPlayers[j].name == opName) {
@@ -602,7 +823,7 @@
                 }
             }
 
-            //Update info & redraw
+            //Update info
             op.pointCardPile.clearAndImport(pgs.OtherPlayers[i].PointCardCount, null);
             var opNormalTopCard = null;
             if (pgs.OtherPlayers[i].NormalCards.Count > 0) {
@@ -611,12 +832,128 @@
             op.normalCardPile.clearAndImport(pgs.OtherPlayers[i].NormalCards.Count, opNormalTopCard);
             ophand = [];
             for (j = 0; j < pgs.OtherPlayers[i].HandCount; j++) {
-                ophand.push(opName + "c" + j);
+                ophand.push(opName + "Handc" + j);
             }
-            op.hand.import(ophand);
+            op.hand.clearAndImport(ophand);
+            op.kings.clearAndImport(pgs.OtherPlayers[i].Kings);
         }
 
         resize(window.innerWidth, window.innerHeight);
+    }
+
+    hub.client.receivePlayerGameAction = function(pgadata) {
+        var pga = JSON.parse(pgadata);
+        switch (pga.action) {
+            case "discard":
+                //Removing discarded card from hand
+                if (pga.playerName == playerName) {
+                    hand.removeCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                } else {
+                    for (var i = 0; i < otherPlayers.length; i++) {
+                        if (otherPlayers[i].name == pga.playerName) {
+                            otherPlayers[i].hand.popCard();
+                        }
+                    }
+                }
+                //Adding drawn cards/reducing drawpile
+                if (pga.misc == playerName) {
+                    for (var j = 0; j < pga.table.length; j++) {
+                        hand.pushCard(getCardId(pga.table[j].number, pga.table[j].suit));
+                        drawpile.popCard();
+                    }
+                } else {
+                    for (var i = 0; i < otherPlayers.length; i++) {
+                        if (otherPlayers[i].name == pga.misc) {
+                            for (var j = 0; j < pga.table.length; j++) {
+                                otherPlayers[j].hand.pushBlankCard();
+                                drawpile.popCard();
+                            }
+                        }
+                    }
+                }
+                //Adding discarded card to Table
+                table.pushCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                //Updating Turn
+                whosTurn = pga.misc;
+                updateTurn();
+                break;
+            default:
+                console.log("default - " + pga.action);
+                break;
+        }
+    }
+
+    //Examines card selection and figures out which actions are possible, then enables those actions
+    updateActions = function () {
+        clearActions();
+        var selectedHand = hand.getSelected();
+        if (selectedHand.length > 0) {
+            var selectedTable = table.getSelected()
+            var onlyNumbered = true;
+            if (selectedHand.length == 1) {
+                enableAction("Discard");
+                var selNum = getCardNumber(selectedHand[0]);
+                var selSuit = getCardSuit(selectedHand[0]);
+                //Sweep, play King, use Cat
+                if (selNum == 12 || selNum == 13 || (selNum == 11 && selSuit == "spades")) {
+                    enableAction("Use");
+                    onlyNumbered = false;
+                }
+                //Pick up queen with wash
+                if (selNum == 11 && selSuit == "clubs") {
+                    onlyNumbered = false;
+                    if (selectedTable.length == 1 && getCardNumber(selectedTable[0]) == 12) {
+                        enableAction("Take");
+                    }
+                }
+            }
+            //Check for non-numbered cards in multiple card selection
+            if (onlyNumbered) {
+                selectedHand.forEach(function (cardId, index) {
+                    var selNum = getCardNumber(cardId);
+                    if (selNum == 12 || selNum == 13) {
+                        onlyNumbered = false;
+                    } else {
+                        if (selNum == 11) {
+                            var selSuit = getCardSuit(cardId);
+                            if (selSuit == "spades" || selSuit == "clubs") {
+                                onlyNumbered = false;
+                            }
+                        }
+                    }
+                });
+                selectedTable.forEach(function (cardId, index) {
+                    var selNum = getCardNumber(cardId);
+                    if (selNum == 12 || selNum == 13) {
+                        onlyNumbered = false;
+                    } else {
+                        if (selNum == 11) {
+                            var selSuit = getCardSuit(cardId);
+                            if (selSuit == "spades" || selSuit == "clubs") {
+                                onlyNumbered = false;
+                            }
+                        }
+                    }
+                });
+            }
+            //No cards in selection of hand or table are kings, queens, or black jacks
+            if (onlyNumbered) {
+                var total = 0;
+                selectedHand.forEach(function (cardId, index) {
+                    total += getCardNumber(cardId);
+                });
+                selectedTable.forEach(function (cardId, index) {
+                    total -= getCardNumber(cardId);
+                });
+                if (total == 0) {
+                    enableAction("Take");
+                }
+                // TODO - Logic for Use for Kings action
+            } else {
+                
+            }
+        }
+        // TODO - logic for Kings, End Turn actions
     }
 
     $(document).ready(function () {
@@ -625,5 +962,37 @@
         $(window).resize(function () {
             resize(window.innerWidth, window.innerHeight);
         })
+
+        //--------ACTIONS----------
+        $('#Take').on('click', function () {
+            clearActions();
+            var handCards = [];
+            hand.getSelected().forEach(function(cardId, index) {
+                handCards.push(new CardObj(cardId));
+            });
+            var tableCards = [];
+            table.getSelected().forEach(function(cardId, index) {
+                tableCards.push(new CardObj(cardId));
+            });
+            var update = JSON.stringify(new GameAction("take", handCards, tableCards, null));
+            hub.server.gameAction(roomCode, update);
+        });
+        $('#Use').on('click', function () {
+            console.log("Use");
+        });
+        $('#Discard').on('click', function () {
+            clearActions();
+            var update = JSON.stringify(new GameAction("discard", [new CardObj(hand.getSelected()[0])], null, null));
+            hub.server.gameAction(roomCode, update);
+        });
+        $('#EndTurn').on('click', function () {
+            console.log("End Turn");
+        });
+        $('#UseforKing').on('click', function () {
+            console.log("Use for King");
+        });
+        $('#Kings').on('click', function () {
+            console.log("Kings");
+        });
     })
 });

@@ -3,27 +3,7 @@
     ViewBag.Title = "SixJuice - " + ViewBag.RoomCode + " - " + ViewBag.PlayerName;
     Layout = "~/Views/Shared/_SJLayout.cshtml";
 }
-
-<div class="gameboard">
-    <div id="top" class="boardrow">
-        <span id="drawpile" class="deck"></span>
-        <span id="table" class="cardBar"> </span>
-    </div>
-    <div id="players">
-        <div id="ThisPlayer" class="boardrow">
-            <span id="pointCardPile" class="deck"></span>
-            <span id="normalCardPile" class="deck normalCardPile"></span>
-            <span id="hand" class="cardBar hand"></span>
-            <span id="kings" class="kings">
-
-            </span>
-        </div>
-    </div>
-    <div id="buttons">
-
-    </div>
-</div>
-
+<div class="notYourTurn"></div>
 <div id="wait" class="wide tall overlay">
     <div class="vert10"></div>
     <div>
@@ -34,6 +14,33 @@
 
         </span>
     </div>
+</div>
+<div class="actionButtonOverlay">
+    <div class="actionButtons">
+        <button class="actionButton" id="Take" style="display: none">Take</button>
+        <button class="actionButton" id="Use" style="display: none">Use</button>
+        <button class="actionButton" id="Discard" style="display: none">Discard</button>
+        <button class="actionButton" id="EndTurn" style="display: none">End Turn</button>
+        <button class="actionButton" id="UseforKing" style="display: none">Use for King</button>
+        <button class="actionButton" id="Kings" style="display: none">Kings</button>
+    </div>
+</div>
+<div class="gameboard">
+    <div id="top" class="boardrow">
+        <span id="drawpile" class="deck"></span>
+        <span id="table" class="cardBar"> </span>
+    </div>
+    <div id="players">
+        <div id="ThisPlayer" class="boardrow">
+            <span id="pointCardPile" class="deck"></span>
+            <span id="normalCardPile" class="deck normalCardPile"></span>
+            <span id="hand" class="cardBar hand"></span>
+            <span id="ThisPlayerKings" class="kings">
+
+            </span>
+        </div>
+    </div>
+    <div id="buttonSpace"></div>
 </div>
 
 <script src="~/Scripts/game.js"></script>

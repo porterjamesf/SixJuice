@@ -168,10 +168,12 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Models\GameAction.cs" />
     <Compile Include="Models\Card.cs" />
     <Compile Include="Models\ConnectedPlayer.cs" />
     <Compile Include="Models\FacingDeck.cs" />
     <Compile Include="Models\Game.cs" />
+    <Compile Include="Models\NewTurn.cs" />
     <Compile Include="Models\OtherPlayerState.cs" />
     <Compile Include="Models\Player.cs" />
     <Compile Include="Models\PlayerGameState.cs" />

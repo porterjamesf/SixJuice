@@ -128,7 +128,7 @@ namespace SixJuice
         {
             //First, update turn to 0 to indicate game has started and prevent it from being
             // deleted when all the players disconnect from the waiting room
-            await _db.IncreaseTurn(roomCode);
+            await _db.SetTurn(roomCode, 0);
 
             //Make the deck
             Game game = await _db.GetGame(roomCode);
@@ -160,6 +160,9 @@ namespace SixJuice
             foreach (Player player in game.Players)
             {
                 player.Hand = draw(game.Deck, 4);
+                //----DISPLAY TESTING PURPOSES ONLY
+                player.Kings = generateRandomKingConfig(game.Deck, rand);
+                //-------------------------
                 player.Ready = false;
             }
             game.Table = draw(game.Deck, 4);
@@ -170,14 +173,19 @@ namespace SixJuice
             //Ready to begin!
             Clients.Group(roomCode).goToTable0();
         }
-        //From room - changes screen state to "Transition" to avoid room disconnect calls from navigation
-        // and calls back
-        //public async Task Transition(string playerName, string roomCode)
-        //{
-        //    await _db.ChangePlayerScreen(playerName, roomCode, "Transition");
-        //    //Clients.Caller.receiveMessage(await _db.GetPlayerScreen(playerName, roomCode));
-        //    Clients.Caller.goToTable1();
-        //}
+        
+        //------TESTING METHOD
+        public List<List<Card>> generateRandomKingConfig(List<Card> deck, Random rand)
+        {
+            List<List<Card>> result = new List<List<Card>>();
+            for(int i = 0; i < 5; i++)
+            {
+                if (rand.Next(2) == 0) break;
+                List<Card> thisKing = draw(deck, rand.Next(3) + 1);
+                result.Add(thisKing);
+            }
+            return result;
+        }
 
         //From Rejoin - Puts connection into listening group for player updates and triggers
         // callback with list of missing players
@@ -227,8 +235,9 @@ namespace SixJuice
             {
                 DeckCount = game.Deck.Count,
                 Table = game.Table,
+                WhosTurn = game.Players[game.Turn].Name,
                 Hand = thisPlayer.Hand,
-                Spells = thisPlayer.Spells,
+                Kings = thisPlayer.Kings,
                 PointCardCount = thisPlayer.PointCards.Count,
                 NormalCards = new FacingDeck
                 {
@@ -243,7 +252,7 @@ namespace SixJuice
                 {
                     PlayerName = player.Name,
                     HandCount = player.Hand.Count,
-                    Spells = player.Spells,
+                    Kings = player.Kings,
                     PointCardCount = player.PointCards.Count,
                     NormalCards = new FacingDeck
                     {
@@ -253,6 +262,57 @@ namespace SixJuice
                 });
             }
             Clients.Caller.receivePlayerGameState(JsonConvert.SerializeObject(pgs));
+        }
+
+        //From Game - posts an in-game action from active player and sends game stat updates to all players
+        public async Task GameAction(string roomCode, string jsonAction)
+        {
+            Console.Out.WriteLine("Test");
+            GameAction result = JsonConvert.DeserializeObject<GameAction>(jsonAction);
+            switch(result.action)
+            {
+                case "discard":
+                    //result contains: name, "discard", hand=discarded card, null, null
+                    NewTurn newTurn = await _db.Discard(roomCode, result.playerName, result.hand.ElementAt(0));
+
+                    var players = await _db.GetConnectedPlayers(roomCode);
+                    foreach(ConnectedPlayer player in players)
+                    {
+                        GameAction playerGameAction = clone(result);
+                        playerGameAction.table = new List<Card>();
+                        if(player.PlayerName.Equals(newTurn.nextPlayerName))
+                        { //Next player - game action table contains drawn cards
+                            foreach(Card card in newTurn.drawnCards)
+                            {
+                                playerGameAction.table.Add(card);
+                            }
+                        } else
+                        { //Other players (including this player) - game action table contains just placeholders
+                            foreach (Card card in newTurn.drawnCards)
+                            {
+                                playerGameAction.table.Add(new Card());
+                            }
+                        }
+                        playerGameAction.misc = newTurn.nextPlayerName;
+                        Clients.Client(player.ConnectionId).receivePlayerGameAction(JsonConvert.SerializeObject(playerGameAction));
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        //Helper for cloning game actions. Note: shallow cloning - card lists point to same lists
+        public GameAction clone(GameAction action)
+        {
+            return new GameAction
+            {
+                playerName = action.playerName,
+                action = action.action,
+                hand = action.hand,
+                table = action.table,
+                misc = action.misc
+            };
         }
 
         //Another way of triggering OnDisconnected, since hub.stop() or $.connection.hub.stop() don't
