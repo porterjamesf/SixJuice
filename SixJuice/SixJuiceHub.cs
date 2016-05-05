@@ -160,9 +160,6 @@ namespace SixJuice
             foreach (Player player in game.Players)
             {
                 player.Hand = draw(game.Deck, 4);
-                //----DISPLAY TESTING PURPOSES ONLY
-                player.Kings = generateRandomKingConfig(game.Deck, rand);
-                //-------------------------
                 player.Ready = false;
             }
             game.Table = draw(game.Deck, 4);
@@ -172,19 +169,6 @@ namespace SixJuice
 
             //Ready to begin!
             Clients.Group(roomCode).goToTable0();
-        }
-        
-        //------TESTING METHOD
-        public List<List<Card>> generateRandomKingConfig(List<Card> deck, Random rand)
-        {
-            List<List<Card>> result = new List<List<Card>>();
-            for(int i = 0; i < 5; i++)
-            {
-                if (rand.Next(2) == 0) break;
-                List<Card> thisKing = draw(deck, rand.Next(3) + 1);
-                result.Add(thisKing);
-            }
-            return result;
         }
 
         //From Rejoin - Puts connection into listening group for player updates and triggers
@@ -271,10 +255,32 @@ namespace SixJuice
             GameAction result = JsonConvert.DeserializeObject<GameAction>(jsonAction);
             switch(result.action)
             {
+                case "take":
+                    await _db.Take(roomCode, result.playerName, result.hand, result.table);
+                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+                    break;
+                case "useK":
+                    await _db.PlayKing(roomCode, result.playerName, result.hand.ElementAt(0));
+                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+                    break;
+                case "useQ":
+                    Clients.Group(roomCode).qcd(jsonAction);
+                    break;
+                case "endQ":
+                    if (result.misc != null)
+                    {
+                        await _db.PlayJackOfClubs(roomCode, result.playerName, result.misc, result.hand.ElementAt(0), result.table);
+                    }
+                    else
+                    {
+                        await _db.PlayQueen(roomCode, result.playerName, result.hand.ElementAt(0), result.table);
+                    }
+                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+                    break;
                 case "discard":
                     //result contains: name, "discard", hand=discarded card, null, null
-                    NewTurn newTurn = await _db.Discard(roomCode, result.playerName, result.hand.ElementAt(0));
-
+                    NewTurn newTurn = await _db.Discard(roomCode, result.playerName, (result.hand == null? null : result.hand.ElementAt(0)));
+                    
                     var players = await _db.GetConnectedPlayers(roomCode);
                     foreach(ConnectedPlayer player in players)
                     {
@@ -297,9 +303,25 @@ namespace SixJuice
                         Clients.Client(player.ConnectionId).receivePlayerGameAction(JsonConvert.SerializeObject(playerGameAction));
                     }
                     break;
+
                 default:
                     break;
             }
+        }
+
+        //From Game: passes on the message that a given player OK's the use of a queen. Message is then sent to the
+        // queen player.
+        public async Task okQueen(string roomCode, string playerName)
+        {
+            Game game = await _db.GetGame(roomCode);
+            string conId = await _db.GetConnectedPlayerId(roomCode, game.Players.ElementAt(game.Turn).Name);
+            Clients.Client(conId).okQueen(playerName);
+        }
+
+        //From Game: Broadcasts resQ messages to all clients (for resuming queen count down after reconnection)
+        public void resQ(string roomCode, int count, Card queen, string queenPlayer, List<string> nonOkd)
+        {
+            Clients.Group(roomCode).resQ(count, queen, queenPlayer, nonOkd);
         }
 
         //Helper for cloning game actions. Note: shallow cloning - card lists point to same lists

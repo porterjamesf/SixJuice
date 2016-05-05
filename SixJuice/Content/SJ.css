@@ -20,8 +20,14 @@
 
 .notYourTurn {
     position: absolute;
-    z-index: 100;
+    z-index: 125;
     pointer-events: none;
+    background-color: rgba(10, 0, 10, 0.09);
+}
+
+.queenOverlay {
+    position: absolute;
+    z-index: 90;
     background-color: rgba(10, 0, 10, 0.09);
 }
 
@@ -69,6 +75,10 @@
     overflow-y:hidden;
 }
 
+.queenButtons {
+    position:absolute;
+}
+
 .menuTitle {
     padding: 10px;
 }
@@ -80,6 +90,15 @@
     border-color: #000000;
     border-width: 1px;
     border-radius: 3px;
+}
+
+.queenButton {
+    height: 2.5em;
+    margin: 5px;
+    background-color: #dcd3e8;
+    border-color: #666666;
+    border-width: 1px;
+    border-radius: 2px;
 }
 
 .SJBody {

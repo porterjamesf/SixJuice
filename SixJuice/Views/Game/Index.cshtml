@@ -3,6 +3,27 @@
     ViewBag.Title = "SixJuice - " + ViewBag.RoomCode + " - " + ViewBag.PlayerName;
     Layout = "~/Views/Shared/_SJLayout.cshtml";
 }
+<div class="queenOverlay" style="display:none">
+    <div class="vert10"></div>
+    <div>
+        <span class="sidepad"></span>
+        <div class="sidepadsandwich overlayContent vert80" style="display:inline-block">
+            <span id="sweeper" class="medText spiv">Player1 is playing a Queen</span>
+            <span id="count" class="medText spiv">5...</span>
+            <div class="vert30"></div>
+            <div id="nojack" class="queenButtons vert50">
+                <span class="sidepad"></span>
+                <button class="queenButton sidepadsandwich smallText" id="OK">OK</button>
+            </div>
+            <div id="jack" class="queenButtons vert50">
+                <span class="sidepad"></span>
+                <button class="queenButton sidepadsandwich smallText" id="UseJack">Use Jack of Clubs</button>
+                <span class="sidepad"></span>
+                <button class="queenButton sidepadsandwich smallText" id="HoldJack">Hold Jack Of Clubs</button>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="notYourTurn"></div>
 <div id="wait" class="wide tall overlay">
     <div class="vert10"></div>

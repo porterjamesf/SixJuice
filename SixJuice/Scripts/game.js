@@ -23,8 +23,18 @@
         }
         if (allReady) {
             $('#wait').hide();
+            if (playedQueen != null) { //Someone is reconnecting during queen count down
+                if (playerOKs[0] != playerName) { //I'm the queen player: Send queen count down status w/ all ok's
+                    hub.server.resQ(roomCode, queenCount, playedQueen, playerName, playerOKs);
+                } else { //I'm not the queen player: Send queen count down status w/ report of whether I've ok'd
+                    hub.server.resQ(roomCode, queenCount, playedQueen, queenPlayerName, queenOK ? ["ok", playerName] : ["ok"]);
+                }
+            }
         } else {
             $('#wait').show();
+            if (playedQueen != null) {
+                queenPause = true;
+            }
         }
     }
 
@@ -107,6 +117,31 @@
     }
     getCardSuit = function (cardId) {
         return cardId.substring(0, cardId.length - 2);
+    }
+
+    //Tells whether a card is a point card or a normal card
+    isPointCard = function (cardId) {
+        switch (getCardNumber(cardId)) {
+            case 13:
+            case 12:
+            case 6:
+                return true;
+            case 11:
+                var cardSuit = getCardSuit(cardId);
+                if (cardSuit == "clubs" || cardSuit == "spades") {
+                    return true;
+                }
+                break;
+            case 7:
+            case 4:
+                if (getCardSuit(cardId) == "hearts") {
+                    return true;
+                }
+                break;
+            default:
+                break;
+        }
+        return false;
     }
 
     //Loads up the appropriate card image to the card element with the specified id
@@ -195,6 +230,7 @@
         width = wid - 2 * pagemargins[size] - 1;
         height = hei - 2 * pagemargins[size] - 1;
         setSize('.notYourTurn', wid - 1, hei - 1);
+        setSize('.queenOverlay', wid - 1, hei - 1);
         setSize('.gameboard', width, height);
         $('.gameboard').css("padding", pagemargins[size]);
         //Find sizing index
@@ -212,7 +248,6 @@
         setSize('.deck', deckwidths[size], deckheights[size]);
         $('.cardBar').css("top", deckmargins[size] + rowmargins[size]);
         $('.cardBar').css("height", cardheights[size]);
-        $('.king').css("top", deckmargins[size] + rowmargins[size]);
         $('.boardrow').css("height", deckheights[size]);
         $('.boardrow').css("padding", rowmargins[size]);
         //Set element positions
@@ -241,6 +276,7 @@
         $('.actionButton').css("margin", standardmargins[size] + "px");
     }
     calculateKingAndPlayerWidths = function () {
+        $('.king').css("top", deckmargins[size] + rowmargins[size]);
         var amalgKings = [kings];
         for (var i = 0; i < otherPlayers.length; i++) {
             amalgKings.push(otherPlayers[i].kings);
@@ -671,6 +707,7 @@
             this.kings.forEach(function (king, index) {
                 king.redraw();
             });
+            calculateKingAndPlayerWidths();
         }
 
         this.import = function (cardss) {
@@ -741,21 +778,28 @@
     drawpile = new Deck("drawpile");
     table = new CardBar("table", true);
     whosTurn = "";
-
+    //Player variables
     pointCardPile = new Deck("pointCardPile");
     normalCardPile = new Deck("normalCardPile");
     hand = new CardBar("hand", true);
     kings = new Kings("ThisPlayerKings");
-
     otherPlayers = [];
+    //Queen count down variables
+    queenTimer = null;
+    queenCount = 10;
+    queenOK = false;
+    playedQueen = null;
+    playerOKs = [];
+    queenPause = false;
+    queenPlayerName = null;
 
+    // Links for redraw convenience
     drawables = [];
     drawables.push(drawpile);
     drawables.push(table);
     drawables.push(pointCardPile);
     drawables.push(normalCardPile);
     drawables.push(hand);
-    drawables.push(kings);
 
     //Complete update of the board from the database
     hub.client.receivePlayerGameState = function (pgsdata) {
@@ -813,7 +857,7 @@
                 drawables.push(op.pointCardPile);
                 drawables.push(op.normalCardPile);
                 drawables.push(op.hand);
-                drawables.push(op.kings);
+                //drawables.push(op.kings);
             } else {
                 for (var j = 0; j < otherPlayers.length; j++) {
                     if (otherPlayers[j].name == opName) {
@@ -841,17 +885,244 @@
         resize(window.innerWidth, window.innerHeight);
     }
 
+    // Starts a queen count down from the beginning
+    hub.client.qcd = function (useQga) {
+        var qga = JSON.parse(useQga);
+        startQueenCountDown(qga.playerName, qga.hand[0], 15, false);
+    }
+    // ResQ - Queen count down resume; This is sent by other clients (bounced off server) when a reconnect occurs during
+    // a queen count down. For players still connected and counting down, this simply resumes (and aligns count). For the
+    // reconnecting player (who is not counting down), this starts the count down. If the reconnecting player is the one
+    // who played the queen, incoming resQ events from other players updates the internal OK list
+    hub.client.resQ = function (count, queenCard, queenPlayer, nonOks) {
+        if (playedQueen == null) { // This client is not counting, so it must be the reconnecting one
+            if (queenPlayer == playerName) {
+                startQueenCountDown(playerName, queenCard, count, false);
+            } else {
+                if (nonOks[0] != "ok") {
+                    startQueenCountDown(queenPlayer, queenCard, count, nonOks.indexOf(playerName) == -1);
+                }
+            }
+        } else { // Already counting down, so just resume
+            queenCount = count;
+            queenPause = false;
+        }
+        if (queenPlayer == playerName) { // Update the OK list for the queen player
+            if (nonOks[0] == "ok" && nonOks.length == 2) {
+                okq(nonOks[1]);
+            }
+        }
+    }
+    // Starts a queen count down. The player who played the queen sets up the queen variables to keep track of who still
+    // needs to OK the queen or not. The other players get buttons for OKing (or playing the Jack of clubs). All players
+    // schedule the count down. When the count runs out, anyone who hasn't will automatically send an OK.
+    startQueenCountDown = function (queenPlayer, queenCard, timerCount, isOKd) {
+        $('#jack').hide();
+        $('#nojack').hide();
+        queenPlayerName = queenPlayer;
+        if (queenPlayer == playerName) {
+            queenOK = true;
+            playerOKs = [];
+            otherPlayers.forEach(function (oPlayer, index) {
+                playerOKs.push(oPlayer.name);
+            });
+            $('#sweeper').text("Playing Queen...");
+        } else {
+            queenOK = isOKd;
+            playerOKs = [playerName];
+            $('#sweeper').text(queenPlayer + "is playing a Queen.");
+            if (!queenOK) {
+                if (hand.cardList.indexOf("clubs11") >= 0) {
+                    $('#jack').show();
+                } else {
+                    $('#nojack').show();
+                }
+            }
+        }
+        $('.queenOverlay').show();
+        queenCount = timerCount;
+        playedQueen = queenCard;
+        queenPause = false;
+        queenTimer = setInterval(function () {
+            if (!queenPause) {
+                $('#count').text(queenCount);
+                if (queenCount <= 0) {
+                    if (!queenOK) {
+                        $('#jack').hide();
+                        $('#nojack').hide();
+                        hub.server.okQueen(roomCode, playerName);
+                    }
+                    clearInterval(queenTimer);
+                } else {
+                    queenCount -= 1;
+                }
+            }
+        }, 1000);
+    }
+    // Method(s) for updating queen OK list, for the queen player only. Removes ok'd name from list. When list is empty,
+    // triggers call to complete queen play.
+    hub.client.okQueen = function (okingName) {
+        okq(okingName);
+    }
+    okq = function (okingName) {
+        var index = playerOKs.indexOf(okingName);
+        playerOKs.splice(index, 1);
+        if (playerOKs.length == 0) {
+            tableCards = [];
+            table.cardList.forEach(function (cardID, index) {
+                tableCards.push(new CardObj(cardID));
+            });
+            hub.server.gameAction(roomCode, JSON.stringify(new GameAction("endQ", [playedQueen], tableCards, null)));
+        }
+    }
+
     hub.client.receivePlayerGameAction = function(pgadata) {
         var pga = JSON.parse(pgadata);
         switch (pga.action) {
-            case "discard":
-                //Removing discarded card from hand
+            case "take":
+                var collectedCards = [];
+                //Removing cards from table
+                for (var i = 0; i < pga.table.length; i++) {
+                    var cardId = getCardId(pga.table[i].number, pga.table[i].suit);
+                    collectedCards.push(cardId);
+                    table.removeCard(cardId);
+                }
+                //Removing cards from hand
+                for (var i = 0; i < pga.hand.length; i++) {
+                    var cardId = getCardId(pga.hand[i].number, pga.hand[i].suit);
+                    collectedCards.push(cardId);
+                    if (pga.playerName == playerName) {
+                        hand.removeCard(cardId);
+                    } else {
+                        for (var j = 0; j < otherPlayers.length; j++) {
+                            if (otherPlayers[j].name == pga.playerName) {
+                                otherPlayers[j].hand.popCard();
+                            }
+                        }
+                    }
+                }
+                //Adding cards to card piles
+                for (var i = 0; i < collectedCards.length; i++) {
+                    if (pga.playerName == playerName) {
+                        if(isPointCard(collectedCards[i])) {
+                            pointCardPile.pushCard(null);
+                        } else {
+                            normalCardPile.pushCard(collectedCards[i]);
+                        }
+                    } else {
+                        for (var j = 0; j < otherPlayers.length; j++) {
+                            if (otherPlayers[j].name == pga.playerName) {
+                                if (isPointCard(collectedCards[i])) {
+                                    otherPlayers[j].pointCardPile.pushCard(null);
+                                } else {
+                                    otherPlayers[j].normalCardPile.pushCard(collectedCards[i]);
+                                }
+                            }
+                        }
+                    }
+                }
+                //Update actions
+                updateActions();
+                break;
+            case "useK":
+                var kingID = getCardId(pga.hand[0].number, pga.hand[0].suit);
                 if (pga.playerName == playerName) {
-                    hand.removeCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                    //Removing king from hand
+                    hand.removeCard(kingID);
+                    //Playing king
+                    kings.pushKing(kingID);
                 } else {
                     for (var i = 0; i < otherPlayers.length; i++) {
                         if (otherPlayers[i].name == pga.playerName) {
+                            //Removing a card from hand
                             otherPlayers[i].hand.popCard();
+                            //Playing king
+                            otherPlayers[i].kings.pushKing(kingID);
+                        }
+                    }
+                }
+                //Update actions
+                updateActions();
+                break;
+            case "endQ":
+                //Stop count down
+                if (queenTimer != null) {
+                    clearInterval(queenTimer);
+                }
+                playedQueen = null;
+                $('.queenOverlay').hide();
+                //Remove cards
+                table.clear(); //from table
+                var collectedCards = [];
+                for (var i = 0; i < pga.table.length; i++) {
+                    var cardId = getCardId(pga.table[i].number, pga.table[i].suit);
+                    collectedCards.push(cardId);
+                }
+                // remove queen
+                var theQueenPlayer = pga.playerName;
+                var theJackPlayer = null;
+                if (pga.misc != null) {
+                    theQueenPlayer = pga.misc;
+                    theJackPlayer = pga.playerName;
+                }
+                if (theQueenPlayer == playerName) {
+                    hand.removeCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                } else {
+                    for (var i = 0; i < otherPlayers.length; i++) {
+                        if (otherPlayers[i].name == theQueenPlayer) {
+                            otherPlayers[i].hand.popCard();
+                        }
+                    }
+                }
+                collectedCards.push(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                if (theJackPlayer != null) {
+                    // remove jack of clubs, if it was played
+                    if (theJackPlayer == playerName) {
+                        hand.removeCard("clubs11");
+                    } else {
+                        for (var i = 0; i < otherPlayers.length; i++) {
+                            if (otherPlayers[i].name == theJackPlayer) {
+                                otherPlayers[i].hand.popCard();
+                            }
+                        }
+                    }
+                    collectedCards.push("clubs11");
+                }
+                // Figure out who to give points to
+                var pointReceiver = (theJackPlayer == null ? theQueenPlayer : theJackPlayer);
+                //Adding cards to card piles
+                for (var i = 0; i < collectedCards.length; i++) {
+                    if (pointReceiver == playerName) {
+                        if (isPointCard(collectedCards[i])) {
+                            pointCardPile.pushCard(null);
+                        } else {
+                            normalCardPile.pushCard(collectedCards[i]);
+                        }
+                    } else {
+                        for (var j = 0; j < otherPlayers.length; j++) {
+                            if (otherPlayers[j].name == pointReceiver) {
+                                if (isPointCard(collectedCards[i])) {
+                                    otherPlayers[j].pointCardPile.pushCard(null);
+                                } else {
+                                    otherPlayers[j].normalCardPile.pushCard(collectedCards[i]);
+                                }
+                            }
+                        }
+                    }
+                }
+                //Update actions
+                updateActions();
+                break;
+            case "discard":
+                //Removing discarded card from hand
+                if (pga.hand != null) {
+                    if (pga.playerName == playerName) {
+                        hand.removeCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                    } else {
+                        for (var i = 0; i < otherPlayers.length; i++) {
+                            if (otherPlayers[i].name == pga.playerName) {
+                                otherPlayers[i].hand.popCard();
+                            }
                         }
                     }
                 }
@@ -865,16 +1136,19 @@
                     for (var i = 0; i < otherPlayers.length; i++) {
                         if (otherPlayers[i].name == pga.misc) {
                             for (var j = 0; j < pga.table.length; j++) {
-                                otherPlayers[j].hand.pushBlankCard();
+                                otherPlayers[i].hand.pushBlankCard();
                                 drawpile.popCard();
                             }
                         }
                     }
                 }
                 //Adding discarded card to Table
-                table.pushCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                if (pga.hand != null) {
+                    table.pushCard(getCardId(pga.hand[0].number, pga.hand[0].suit));
+                }
                 //Updating Turn
                 whosTurn = pga.misc;
+                console.log("It's now " + whosTurn + "'s turn.");
                 updateTurn();
                 break;
             default:
@@ -953,6 +1227,9 @@
                 
             }
         }
+        if (hand.cardList.length == 0) {
+            enableAction("EndTurn");
+        }
         // TODO - logic for Kings, End Turn actions
     }
 
@@ -978,7 +1255,42 @@
             hub.server.gameAction(roomCode, update);
         });
         $('#Use').on('click', function () {
-            console.log("Use");
+            clearActions();
+            var usedCard = new CardObj(hand.getSelected()[0]);
+            var update = null;
+            switch (usedCard.number) {
+                case 13:
+                    update = JSON.stringify(new GameAction("useK", [usedCard], null, null));
+                    break;
+                case 12:
+                    update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
+                    break;
+                default:
+                    console.log("Use " + usedCard.number + " of " + usedCard.suit);
+                    break;
+            }
+            if (update != null) {
+                hub.server.gameAction(roomCode, update);
+            }
+        });
+        $('#OK').on('click', function () {
+            queenOK = true;
+            $('#nojack').hide();
+            hub.server.okQueen(roomCode, playerName);
+        });
+        $('#HoldJack').on('click', function () {
+            queenOK = true;
+            $('#jack').hide();
+            hub.server.okQueen(roomCode, playerName);
+        });
+        $('#UseJack').on('click', function () {
+            $('#jack').hide();
+            tableCards = [];
+            table.cardList.forEach(function (cardID, index) {
+                tableCards.push(new CardObj(cardID));
+            });
+            var update = JSON.stringify(new GameAction("endQ", [playedQueen], tableCards, queenPlayerName));
+            hub.server.gameAction(roomCode, update);
         });
         $('#Discard').on('click', function () {
             clearActions();
@@ -986,7 +1298,9 @@
             hub.server.gameAction(roomCode, update);
         });
         $('#EndTurn').on('click', function () {
-            console.log("End Turn");
+            clearActions();
+            var update = JSON.stringify(new GameAction("discard", null, null, null));
+            hub.server.gameAction(roomCode, update);
         });
         $('#UseforKing').on('click', function () {
             console.log("Use for King");
