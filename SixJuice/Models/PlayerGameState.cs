@@ -14,6 +14,7 @@ namespace SixJuice.Models
         //This player
         public List<Card> Hand { get; set; }
         public List<List<Card>> Kings { get; set; }
+        public List<List<Card>> KSources { get; set; }
         public int PointCardCount { get; set; }
         public FacingDeck NormalCards { get; set; }
         //Other players

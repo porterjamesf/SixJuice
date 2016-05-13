@@ -21,14 +21,14 @@ namespace SixJuice.Database
 
         #region Game Play
 
-        Task<NewTurn> SetTurn(string roomCode, int value);
+        Task SetTurn(string roomCode, int value);
         Task<NewTurn> Discard(string roomCode, string playerName, Card discard);
         Task Take(string roomCode, string playerName, List<Card> fromHand, List<Card> fromTable);
         Task PlayKing(string roomCode, string playerName, Card king);
         Task PlayQueen(string roomCode, string playerName, Card queen, List<Card> fromTable);
         Task PlayJackOfClubs(string roomCode, string playerName, string queenPlayerName, Card queen, List<Card> fromTable);
         Task PlayJackOfSpades(string roomCode, string playerName, string victimName);
-        Task UseForKing(string roomCode, string playerName, string source, List<List<Card>> cards, List<Card> kings);
+        Task UseForKing(string roomCode, string playerName, string source, List<Card> cards);
 
         #endregion
 

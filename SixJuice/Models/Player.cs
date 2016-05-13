@@ -13,5 +13,6 @@ namespace SixJuice.Models
         public List<Card> NormalCards { get; set; }
         public List<Card> Hand { get; set; }
         public List<List<Card>> Kings { get; set; }
+        public List<List<Card>> KSources { get; set; }
     }
 }

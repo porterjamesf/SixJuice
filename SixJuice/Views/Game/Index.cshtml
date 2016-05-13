@@ -3,38 +3,56 @@
     ViewBag.Title = "SixJuice - " + ViewBag.RoomCode + " - " + ViewBag.PlayerName;
     Layout = "~/Views/Shared/_SJLayout.cshtml";
 }
-<div class="queenOverlay" style="display:none">
-    <div class="vert10"></div>
-    <div>
-        <span class="sidepad"></span>
-        <div class="sidepadsandwich overlayContent vert80" style="display:inline-block">
-            <span id="sweeper" class="medText spiv">Player1 is playing a Queen</span>
-            <span id="count" class="medText spiv">5...</span>
-            <div class="vert30"></div>
-            <div id="nojack" class="queenButtons vert50">
-                <span class="sidepad"></span>
-                <button class="queenButton sidepadsandwich smallText" id="OK">OK</button>
-            </div>
-            <div id="jack" class="queenButtons vert50">
-                <span class="sidepad"></span>
-                <button class="queenButton sidepadsandwich smallText" id="UseJack">Use Jack of Clubs</button>
-                <span class="sidepad"></span>
-                <button class="queenButton sidepadsandwich smallText" id="HoldJack">Hold Jack Of Clubs</button>
-            </div>
+<div class="queenOverlay overlay" style="display:none">
+    <div class="overlayContent" style="display:inline-block">
+        <span id="sweeper" class="medText spiv">Player1 is playing a Queen</span>
+        <span id="count" class="medText spiv">5...</span>
+        <div class="vert30"></div>
+        <div id="nojack" class="queenButtons vert50">
+            <span class="sidepad"></span>
+            <button class="queenButton sidepadsandwich smallText" id="OK">OK</button>
+        </div>
+        <div id="jack" class="queenButtons vert50">
+            <span class="sidepad"></span>
+            <button class="queenButton sidepadsandwich smallText" id="UseJack">Use Jack of Clubs</button>
+            <span class="sidepad"></span>
+            <button class="queenButton sidepadsandwich smallText" id="HoldJack">Hold Jack Of Clubs</button>
         </div>
     </div>
 </div>
-<div class="notYourTurn"></div>
-<div id="wait" class="wide tall overlay">
-    <div class="vert10"></div>
-    <div>
-        <span class="sidepad"></span>
-        <span class="sidepadsandwich overlayContent vert80">
-            <span class="medText spiv">Waiting for players:</span>
-            <span id="waitList"></span>
-
-        </span>
+<div class="kingOverlay overlay" style="display:none">
+    <div id="kingContent" class="overlayContent" style="display:inline-block">
+        <div class="kClose">X</div>
+        <div class="medText">Kings</div>
+        <div class="kLabel">From your hand:</div>
+        <div id="kHand" class="boardrow">
+            <span id="kHandCards" class="cardBar kCardBar"></span>
+            <button id="kHandUse" class="kButton">Use</button>
+        </div>
+        <div class="kLabel">From the table:</div>
+        <div id="kTable" class="boardrow">
+            <span id="kTableCards" class="cardBar kCardBar"></span>
+            <button id="kTableUse" class="kButton">Use</button>
+        </div>
+        <div class="kLabel">From another player:</div>
+        <div id="kPlayer" class="boardrow">
+            <span id="kPlayerCards" class="cardBar kCardBar"></span>
+            <div id="kPlayerMenu" class="kPlayerChooser" style="display:none">
+                @*<button class="pButton" data-name="Player1">Player1</button>
+                <button class="pButton">Player2</button>
+                <button class="pButton">Reginald McExtralonglastname</button>*@
+            </div>
+            <button id="kPlayerDrop" class="kButton">Ask...</button>
+        </div>
     </div>
+</div>
+<div class="notYourTurn overlay"></div>
+<div id="wait" class="waitOverlay overlay">
+    <span class="overlayContent">
+        <span class="medText spiv">Waiting for players:</span>
+        <span id="waitList"></span>
+
+    </span>
 </div>
 <div class="actionButtonOverlay">
     <div class="actionButtons">

@@ -163,6 +163,10 @@ namespace SixJuice
                 player.Ready = false;
             }
             game.Table = draw(game.Deck, 4);
+            //Populate the first KSources
+            game.Players[0].KSources = new List<List<Card>>();
+            game.Players[0].KSources.Add(game.Players[0].Hand);
+            game.Players[0].KSources.Add(game.Table);
 
             //Save state
             await _db.SaveGame(roomCode, game);
@@ -222,6 +226,7 @@ namespace SixJuice
                 WhosTurn = game.Players[game.Turn].Name,
                 Hand = thisPlayer.Hand,
                 Kings = thisPlayer.Kings,
+                KSources = thisPlayer.KSources,
                 PointCardCount = thisPlayer.PointCards.Count,
                 NormalCards = new FacingDeck
                 {
@@ -259,8 +264,38 @@ namespace SixJuice
                     await _db.Take(roomCode, result.playerName, result.hand, result.table);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
                     break;
+                case "ask":
+                    Game game = await _db.GetGame(roomCode);
+                    var matches = new List<Card>();
+                    var neededNumbers = result.hand.Select(c => c.number);
+                    foreach(Card card in game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand)
+                    {
+                        if(neededNumbers.Contains(card.number))
+                        {
+                            if(card.number == 11 && (card.suit.Equals("spades") || card.suit.Equals("clubs")))
+                            {
+                                continue;
+                            }
+                            matches.Add(card);
+                        }
+                    }
+                    if(matches.Count == 0)
+                    {
+                        break;
+                    }
+                    Card[] copydest = new Card[matches.Count];
+                    matches.CopyTo(copydest);
+                    result.hand = copydest.ToList();
+                    await _db.UseForKing(roomCode, result.playerName, result.misc, matches);
+                    result.action = "u4K";
+                    Clients.Group(roomCode).receivePlayerGameAction(JsonConvert.SerializeObject(result));
+                    break;
                 case "useK":
                     await _db.PlayKing(roomCode, result.playerName, result.hand.ElementAt(0));
+                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+                    break;
+                case "u4K":
+                    await _db.UseForKing(roomCode, result.playerName, result.misc, result.hand);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
                     break;
                 case "useQ":
@@ -275,6 +310,10 @@ namespace SixJuice
                     {
                         await _db.PlayQueen(roomCode, result.playerName, result.hand.ElementAt(0), result.table);
                     }
+                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+                    break;
+                case "useJ":
+                    await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
                     break;
                 case "discard":

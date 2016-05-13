@@ -28,7 +28,7 @@ namespace SixJuice.Database
             }
         }
 
-        public MongoDBHelper ()
+        public MongoDBHelper()
         {
             _db = (new MongoClient(Properties.Settings.Default.connectionString)).GetDatabase("Sixjuice");
         }
@@ -74,11 +74,11 @@ namespace SixJuice.Database
         public async Task<Game> GetGame(string roomCode)
         {
             var result = (await games.FindAsync(getFilter(roomCode))).ToList();
-            if(result.Count == 0)
+            if (result.Count == 0)
             {
                 throw new NoSuchGameException("There is no game with room code " + roomCode);
             }
-            if(result.Count > 1)
+            if (result.Count > 1)
             {
                 throw new DuplicateGameException("There are multiple open games with room code " + roomCode);
             }
@@ -110,11 +110,12 @@ namespace SixJuice.Database
                 PointCards = new List<Card>(),
                 NormalCards = new List<Card>(),
                 Hand = new List<Card>(),
-                Kings = new List<List<Card>>()
+                Kings = new List<List<Card>>(),
+                KSources = new List<List<Card>>()
             };
             var update = Builders<Game>.Update.Push("Players", player);
             var result = await games.UpdateOneAsync(getFilter(roomCode), update);
-            if(!result.IsAcknowledged || result.MatchedCount == 0)
+            if (!result.IsAcknowledged || result.MatchedCount == 0)
             {
                 throw new NoSuchGameException("Could not update game with room code " + roomCode);
             }
@@ -159,31 +160,12 @@ namespace SixJuice.Database
 
         #region Game Play
 
-        //Updates the value of Turn and draws cards for new active player
-        public async Task<NewTurn> SetTurn(string roomCode, int value)
+        //Updates the value of Turn 
+        public async Task SetTurn(string roomCode, int value)
         {
             var game = await GetGame(roomCode);
             var update = Builders<Game>.Update.Set("Turn", value);
-            NewTurn newTurn = new NewTurn
-            {
-                nextPlayerName = game.Players[value].Name,
-                drawnCards = new List<Card>()
-            };
-            if (game.Turn != -1)
-            {
-                int cardsToDraw = 4 - game.Players[value].Hand.Count;
-                for (int i = 0; i < cardsToDraw; i++)
-                {
-                    if (i < game.Deck.Count)
-                    {
-                        Card card = game.Deck.ElementAt(i);
-                        update = update.Pull("Deck", card).Push("Players." + value + ".Hand", card);
-                        newTurn.drawnCards.Add(card);
-                    }
-                }
-            }
             await games.UpdateOneAsync(getFilter(roomCode), update);
-            return newTurn;
         }
 
         //Performs card move, turn update, and draws cards for next player
@@ -202,6 +184,7 @@ namespace SixJuice.Database
             if (discard != null)
             {
                 gameUpdates.Add(Builders<Game>.Update.Push("Table", discard));
+                game.Table.Add(discard); //Just for the kSources
             }
             NewTurn newTurn = new NewTurn
             {
@@ -220,9 +203,17 @@ namespace SixJuice.Database
                     gameUpdates.Add(Builders<Game>.Update.Pull("Deck", card));
                     newTurn.drawnCards.Add(card);
                     nextPlayerHandUpdates.Add(Builders<Game>.Update.Push("Players.$.Hand", card));
+                    game.Players[nextPlayer].Hand.Add(card); //Just for the kSources
                 }
             }
-            if(discard != null)
+            //Finding kSources
+            var kings = game.Players[nextPlayer].Kings;
+            var kSources = new List<List<Card>>();
+            kSources.Add(game.Players[nextPlayer].Hand);
+            kSources.Add(game.Table);
+            nextPlayerHandUpdates.Add(Builders<Game>.Update.Set("Players.$.KSources", kSources));
+            //DB
+            if (discard != null)
             {
                 await games.UpdateOneAsync(filterThisPlayer, updateThisPlayerHand);
             }
@@ -378,9 +369,157 @@ namespace SixJuice.Database
             }
         }
 
-        public async Task PlayJackOfSpades(string roomCode, string playerName, string victimName) { }
+        public async Task PlayJackOfSpades(string roomCode, string playerName, string victimName)
+        {
+            Game game = await GetGame(roomCode);
+            var builder = Builders<Game>.Filter;
+            var playerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
+            var playerUpdates = new List<UpdateDefinition<Game>>();
+            playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", new Card { number = 11, suit = "spades" }));
+            var otherPlayerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", victimName);
+            Card cardToPull = game.Players.Where(p => p.Name.Equals(victimName)).Single().PointCards[0];
+            var otherPlayerUpdate = Builders<Game>.Update.Pull("Players.$.PointCards", cardToPull);
+            playerUpdates.Add(Builders<Game>.Update.Push("Players.$.PointCards", cardToPull));
+            await games.UpdateOneAsync(otherPlayerFilter, otherPlayerUpdate);
+            foreach(UpdateDefinition<Game> update in playerUpdates)
+            {
+                await games.UpdateOneAsync(playerFilter, update);
+            }
+        }
 
-        public async Task UseForKing(string roomCode, string playerName, string source, List<List<Card>> cards, List<Card> kings) { }
+        public async Task UseForKing(string roomCode, string playerName, string source, List<Card> cards) {
+            Game game = await GetGame(roomCode);
+            var builder = Builders<Game>.Filter;
+            //Remove used cards from source
+            if(source.Equals("table"))
+            {
+                var roomFilter = getFilter(roomCode);
+                var tableUpdates = new List<UpdateDefinition<Game>>();
+                foreach(Card card in cards)
+                {
+                    tableUpdates.Add(Builders<Game>.Update.Pull("Table", card));
+                }
+                foreach(UpdateDefinition<Game> update in tableUpdates)
+                {
+                    await games.UpdateOneAsync(roomFilter, update);
+                }
+            } else
+            {
+                if(!source.Equals(playerName))
+                {
+                    var otherPlayerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", source);
+                    var otherPlayerUpdates = new List<UpdateDefinition<Game>>();
+                    foreach (Card card in cards)
+                    {
+                        otherPlayerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", card));
+                    }
+                    foreach (UpdateDefinition<Game> update in otherPlayerUpdates)
+                    {
+                        await games.UpdateOneAsync(otherPlayerFilter, update);
+                    }
+                }
+            }
+            var playerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
+            var playerUpdates = new List<UpdateDefinition<Game>>();
+            if(source.Equals(playerName))
+            {
+                foreach (Card card in cards)
+                {
+                    playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", card));
+                }
+                //Updates will be run at end
+            }
+            //Organize cards into list of lists, where each lists the cards going to the corresponding king
+            var collectedCards = new List<Card>();
+            var sortedCards = new List<List<Card>>();
+            var kings = game.Players.Where(p => p.Name.Equals(playerName)).Select(p => p.Kings).Single();
+            for(int i = 0; i < kings.Count; i++)
+            {
+                sortedCards.Add(new List<Card>());
+                var neededNumbers = getNeededNumbers(kings[i][0].suit);
+                for(int j = 1; j < kings[i].Count; j++)
+                {
+                    neededNumbers.Remove(kings[i][j].number);
+                }
+                for(int j = cards.Count - 1; j >= 0; j--)
+                {
+                    if(neededNumbers.Contains(cards[j].number))
+                    {
+                        sortedCards[i].Add(cards[j]);
+                        neededNumbers.Remove(cards[j].number);
+                        cards.Remove(cards[j]);
+                    }
+                }
+                //If the spell is complete, we will move all the cards into collected cards instead, and pull the spell
+                if(neededNumbers.Count == 0)
+                {
+                    foreach(Card card in kings[i])
+                    {
+                        collectedCards.Add(card);
+                    }
+                    foreach(Card card in sortedCards[i])
+                    {
+                        collectedCards.Add(card);
+                    }
+                    sortedCards[i].Clear();
+                    playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Kings", kings[i]));
+                }
+            }
+            //Add collected cards
+            var sortedCollectedCards = sortCards(collectedCards);
+            //   Adding cards to point card pile
+            for (int i = 0; i < sortedCollectedCards[0].Count; i++)
+            {
+                playerUpdates.Add(Builders<Game>.Update.Push("Players.$.PointCards", sortedCollectedCards[0].ElementAt(i)));
+            }
+            //   Adding cards to normal card pile
+            for (int i = 0; i < sortedCollectedCards[1].Count; i++)
+            {
+                playerUpdates.Add(Builders<Game>.Update.Push("Players.$.NormalCards", sortedCollectedCards[1].ElementAt(i)));
+            }
+            //Add cards to spells
+            for(int i = 0; i < sortedCards.Count; i++)
+            {
+                foreach(Card card in sortedCards[i])
+                {
+                    playerUpdates.Add(Builders<Game>.Update.Push("Players.$.Kings." + i, card));
+                }
+            }
+
+            foreach(var update in playerUpdates)
+            {
+                await games.UpdateOneAsync(playerFilter, update);
+            }
+        }
+
+        //Helper
+        private List<int> getNeededNumbers(string suit)
+        {
+            var neededNumbers = new List<int>();
+            switch (suit)
+            {
+                case "hearts":
+                    neededNumbers.Add(1);
+                    neededNumbers.Add(5);
+                    neededNumbers.Add(9);
+                    break;
+                case "diamonds":
+                    neededNumbers.Add(2);
+                    neededNumbers.Add(6);
+                    neededNumbers.Add(10);
+                    break;
+                case "clubs":
+                    neededNumbers.Add(3);
+                    neededNumbers.Add(7);
+                    neededNumbers.Add(11);
+                    break;
+                case "spades":
+                    neededNumbers.Add(4);
+                    neededNumbers.Add(8);
+                    break;
+            }
+            return neededNumbers;
+        }
 
         //Figures out which cards are point cards and which are normal cards
         public List<Card>[] sortCards(List<Card> cards)

@@ -31,6 +31,36 @@
     background-color: rgba(10, 0, 10, 0.09);
 }
 
+.kingOverlay {
+    position: absolute;
+    z-index: 130;
+    background-color: rgba(10, 0, 10, 0.09);
+}
+
+#kingContent {
+    padding: 5px;
+    overflow-y:auto;
+    overflow-x:hidden;
+}
+
+.kLabel {
+    margin: 10px;
+}
+
+.kPlayerChooser {
+    position: absolute;
+    border: 1px solid black;
+    padding: 5px;
+}
+
+.kClose {
+    float: right;
+    background-color: #909090;
+    border: 1px solid black;
+    border-radius: 10%;
+    padding: 4px;
+}
+
 .SJNavButton {
     float: right;
     height: 3.5em;
@@ -106,7 +136,7 @@
     background-color: #f8f8f8;
 }
 
-.overlay {
+.waitOverlay {
     position:absolute;
     background-color:rgba(0, 0, 0, 0.3);
     z-index: 125;
@@ -262,4 +292,18 @@
     font-size: 1.2em;
     font-weight: 400;
     pointer-events: visible;
+}
+
+.kButton {
+    position: absolute;
+}
+
+.pButton {
+    position: relative;
+    overflow: hidden;
+}
+
+#kPlayerMenu {
+    background-color: #A0A0A0;
+    z-index: 1;
 }
