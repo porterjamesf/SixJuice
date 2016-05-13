@@ -525,6 +525,16 @@
 
             this.redraw();
         }
+        //Returns whether this card bar has the given card, matching suit and number only (ignores additional)
+        this.hasCard = function (cardId) {
+            var cardIdMatch = getCardId(getCardNumber(cardId), getCardSuit(cardId), "");
+            for(var i = 0; i < this.cardList.length; i++) {
+                if (cardIdMatch == getCardId(getCardNumber(this.cardList[i]), getCardSuit(this.cardList[i]), "")) {
+                    return true;
+                }
+            }
+            return false;
+        }
         // Finds a card with matching ID components, not minding additional additional info
         this.findPartialMatchID = function (partialId) {
             for (var i = 0; i < this.cardList.length; i++) {
@@ -555,14 +565,14 @@
             updateActions();
         }
         // Returns list of selected cards
-        this.getSelected = function () {
+        this.getSelected = function (noneIsAll) {
             var result = [];
             this.cardList.forEach(function (cardID, index) {
                 if (e(cardID).hasClass("cardSelected")) {
                     result.push(cardID);
                 }
             });
-            if (result.length == 0) {
+            if (noneIsAll && result.length == 0) {
                 return this.cardList;
             }
             return result;
@@ -1486,82 +1496,98 @@
     //Examines card selection and figures out which actions are possible, then enables those actions
     updateActions = function () {
         clearActions();
-        var selectedHand = hand.getSelected();
-        //if (selectedHand.length > 0) {
-        var selectedTable = table.getSelected()
-            var onlyNumbered = true;
-            if (selectedHand.length == 1) {
-                enableAction("Discard");
-                var selNum = getCardNumber(selectedHand[0]);
-                var selSuit = getCardSuit(selectedHand[0]);
-                //Sweep, play King
-                if (selNum == 12 || selNum == 13) {
-                    enableAction("Use");
-                    onlyNumbered = false;
-                }
-                //Use jack of spades
-                if (selNum == 11 && selSuit == "spades") {
-                    for (var i = 0; i < otherPlayers.length; i++) {
-                        if (otherPlayers[i].pointCardPile.cardList.length > 0) {
-                            enableAction("Use");
-                            break;
-                        }
-                    }
-                }
-                //Pick up queen with wash
-                if (selNum == 11 && selSuit == "clubs") {
-                    onlyNumbered = false;
-                    if (selectedTable.length == 1 && getCardNumber(selectedTable[0]) == 12) {
-                        enableAction("Take");
+        var selectedHand = hand.getSelected(true);
+        var selectedTable = table.getSelected(true)
+        var onlyNumbered = true;
+        if (selectedHand.length == 1) {
+            enableAction("Discard");
+            var selNum = getCardNumber(selectedHand[0]);
+            var selSuit = getCardSuit(selectedHand[0]);
+            //Sweep, play King
+            if (selNum == 12 || selNum == 13) {
+                enableAction("Use");
+                onlyNumbered = false;
+            }
+            //Use jack of spades
+            if (selNum == 11 && selSuit == "spades") {
+                for (var i = 0; i < otherPlayers.length; i++) {
+                    if (otherPlayers[i].pointCardPile.cardList.length > 0) {
+                        enableAction("Use");
+                        break;
                     }
                 }
             }
-            //Check for non-numbered cards in multiple card selection
-            if (onlyNumbered) {
-                selectedHand.forEach(function (cardId, index) {
-                    var selNum = getCardNumber(cardId);
-                    if (selNum == 12 || selNum == 13) {
-                        onlyNumbered = false;
-                    } else {
-                        if (selNum == 11) {
-                            var selSuit = getCardSuit(cardId);
-                            if (selSuit == "spades" || selSuit == "clubs") {
-                                onlyNumbered = false;
-                            }
-                        }
-                    }
-                });
-                selectedTable.forEach(function (cardId, index) {
-                    var selNum = getCardNumber(cardId);
-                    if (selNum == 12 || selNum == 13) {
-                        onlyNumbered = false;
-                    } else {
-                        if (selNum == 11) {
-                            var selSuit = getCardSuit(cardId);
-                            if (selSuit == "spades" || selSuit == "clubs") {
-                                onlyNumbered = false;
-                            }
-                        }
-                    }
-                });
-            }
-            //No cards in selection of hand or table are kings, queens, or black jacks
-            if (onlyNumbered) {
-                var total = 0;
-                selectedHand.forEach(function (cardId, index) {
-                    total += getCardNumber(cardId);
-                });
-                selectedTable.forEach(function (cardId, index) {
-                    total -= getCardNumber(cardId);
-                });
-                if (total == 0) {
+            //Pick up queen with wash
+            if (selNum == 11 && selSuit == "clubs") {
+                onlyNumbered = false;
+                if (selectedTable.length == 1 && getCardNumber(selectedTable[0]) == 12) {
                     enableAction("Take");
                 }
-                // TODO - Logic for Use for Kings action
-            } else {
-                
             }
-        //}
+        }
+        //Check for non-numbered cards in multiple card selection
+        if (onlyNumbered) {
+            selectedHand.forEach(function (cardId, index) {
+                var selNum = getCardNumber(cardId);
+                if (selNum == 12 || selNum == 13) {
+                    onlyNumbered = false;
+                } else {
+                    if (selNum == 11) {
+                        var selSuit = getCardSuit(cardId);
+                        if (selSuit == "spades" || selSuit == "clubs") {
+                            onlyNumbered = false;
+                        }
+                    }
+                }
+            });
+            selectedTable.forEach(function (cardId, index) {
+                var selNum = getCardNumber(cardId);
+                if (selNum == 12 || selNum == 13) {
+                    onlyNumbered = false;
+                } else {
+                    if (selNum == 11) {
+                        var selSuit = getCardSuit(cardId);
+                        if (selSuit == "spades" || selSuit == "clubs") {
+                            onlyNumbered = false;
+                        }
+                    }
+                }
+            });
+        }
+        //No cards in selection of hand or table are kings, queens, or black jacks
+        if (onlyNumbered) {
+            var total = 0;
+            selectedHand.forEach(function (cardId, index) {
+                total += getCardNumber(cardId);
+            });
+            selectedTable.forEach(function (cardId, index) {
+                total -= getCardNumber(cardId);
+            });
+            if (total == 0) {
+                enableAction("Take");
+            }
+        }
+        // Use for King
+        var onlySelectedHand = hand.getSelected(false);
+        var onlySelectedTable = table.getSelected(false);
+        console.log(onlySelectedHand);
+        console.log(onlySelectedTable);
+        if (onlySelectedHand.length != 0 || onlySelectedTable.length != 0) {
+            var canUseForKings = true;
+            onlySelectedHand.forEach(function (cardId, index) {
+                if (!kHand.hasCard(cardId)) {
+                    canUseForKings = false;
+                }
+            });
+            onlySelectedTable.forEach(function (cardId, index) {
+                if (!kTable.hasCard(cardId)) {
+                    canUseForKings = false;
+                }
+            });
+            if (canUseForKings) {
+                enableAction("UseforKing");
+            }
+        }
         if (hand.cardList.length == 0) {
             enableAction("EndTurn");
         }
@@ -1573,7 +1599,7 @@
     askFromPlayer = function (playerToAsk) {
         console.log("Use from player " + playerToAsk);
         var askedForCards = [];
-        var selectedCards = kPlayer.getSelected();
+        var selectedCards = kPlayer.getSelected(true);
         selectedCards.forEach(function (cardId, index) {
             askedForCards.push(new CardObj(cardId)); //Note: suits are random and will be ignored
         });
@@ -1592,11 +1618,11 @@
         $('#Take').on('click', function () {
             clearActions();
             var handCards = [];
-            hand.getSelected().forEach(function (cardId, index) {
+            hand.getSelected(true).forEach(function (cardId, index) {
                 handCards.push(new CardObj(cardId));
             });
             var tableCards = [];
-            table.getSelected().forEach(function (cardId, index) {
+            table.getSelected(true).forEach(function (cardId, index) {
                 tableCards.push(new CardObj(cardId));
             });
             var update = JSON.stringify(new GameAction("take", handCards, tableCards, null));
@@ -1604,7 +1630,7 @@
         });
         $('#Use').on('click', function () {
             clearActions();
-            var usedCard = new CardObj(hand.getSelected()[0]);
+            var usedCard = new CardObj(hand.getSelected(true)[0]);
             var update = null;
             switch (usedCard.number) {
                 case 13:
@@ -1654,7 +1680,7 @@
         });
         $('#Discard').on('click', function () {
             clearActions();
-            var update = JSON.stringify(new GameAction("discard", [new CardObj(hand.getSelected()[0])], null, null));
+            var update = JSON.stringify(new GameAction("discard", [new CardObj(hand.getSelected(true)[0])], null, null));
             hub.server.gameAction(roomCode, update);
         });
         $('#EndTurn').on('click', function () {
@@ -1663,7 +1689,22 @@
             hub.server.gameAction(roomCode, update);
         });
         $('#UseforKing').on('click', function () {
-            console.log("Use for King");
+            var onlySelectedHand = hand.getSelected(false);
+            var handCards = [];
+            onlySelectedHand.forEach(function (cardId, index) {
+                handCards.push(new CardObj(cardId));
+            });
+            var update = JSON.stringify(new GameAction("u4K", handCards, null, playerName));
+
+            var onlySelectedTable = table.getSelected(false);
+            var tableCards = [];
+            onlySelectedTable.forEach(function (cardId, index) {
+                tableCards.push(new CardObj(cardId));
+            });
+            var update2 = JSON.stringify(new GameAction("u4K", tableCards, null, "table"));
+
+            hub.server.gameAction(roomCode, update);
+            hub.server.gameAction(roomCode, update2);
         });
         $('#Kings').on('click', function () {
             clearActions();
@@ -1673,7 +1714,7 @@
             switch (this.id) {
                 case "kHandUse":
                     var handCards = [];
-                    var selectedCards = kHand.getSelected();
+                    var selectedCards = kHand.getSelected(true);
                     selectedCards.forEach(function (cardId, index) {
                         handCards.push(new CardObj(cardId));
                     });
@@ -1682,7 +1723,7 @@
                     break;
                 case "kTableUse":
                     var tableCards = [];
-                    var selectedCards = kTable.getSelected();
+                    var selectedCards = kTable.getSelected(true);
                     selectedCards.forEach(function (cardId, index) {
                         tableCards.push(new CardObj(cardId));
                     });
