@@ -36,6 +36,7 @@
     <script type="text/javascript">
         $(function () {
             menuOpen = false;
+            closingMenu = false; //Used for removing menu history stack 
 
             openMenu = function () {
                 if (!menuOpen) {
@@ -58,12 +59,13 @@
                     history.pushState({ screen: "menu", sub: "main" }, "Main menu", window.location);
                     openMenu();
                 } else {
-                    pushCurrentState();
-                    closeMenu();
+                    closingMenu = true;
+                    window.history.back(); //will trigger a popstate event, see below
                 }
             });
             $('#home').click(function () {
                 console.log("home");
+                history.pushState({ screen: "menu", sub: "home" }, "Menu - Home", window.location);
             });
             $('#rules').click(function () {
                 console.log("rules");
@@ -75,8 +77,18 @@
             window.addEventListener('popstate', function (e) {
                 console.log(e.state);
                 if (e.state != null && e.state.screen == "menu") {
-                    openMenu();
+                    if (closingMenu) { //Closing whole menu; will continue to go back through history until the state
+                        window.history.back(); // popped is not a menu state, thus clearing the menu history stack
+                    } else {
+                        if (e.state.sub == "main") {
+                            console.log("back to main");
+                        }
+                        if (e.state.sub == "home") {
+                            console.log("at home");
+                        }
+                    }
                 } else {
+                    closingMenu = false; //End of menu closing history stack clearing
                     if (menuOpen) {
                         closeMenu();
                     } else {

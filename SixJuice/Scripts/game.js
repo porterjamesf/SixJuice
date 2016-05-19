@@ -43,7 +43,7 @@
         } else {
             for (var i = 0; i < playerInfo.length; i++) {
                 if (playerInfo[i].playerName != playerName) {
-                    $('#kPlayerMenu').append('<button class="pButton">' + playerInfo[i].playerName + '</button>');
+                    $('#kPlayerMenu').append('<button class="pButton smallText">' + playerInfo[i].playerName + '</button>');
                 }
             }
         }
@@ -61,10 +61,13 @@
 
     //History management helpers used in _SJLayout script
     pushCurrentState = function () {
-        history.pushState({ scrn: "Game", rc: roomCode }, "Game " + roomCode, window.location);
+        history.pushState({ scrn: "Game", rc: roomCode, sub: null }, "Game " + roomCode, window.location);
     }
     firePopstate = function (e) {
-        //History navigation passed down from layout
+        console.log("popstate " + e.state);
+        if (e.state == null || e.state.sub == null) {
+            hideKingOverlay();
+        }
     };
 
     //Helper for URL construction
@@ -243,6 +246,9 @@
     pagemargins = [];       //Margin on page outer border
     widthbreakpoints = [];  //Width minimums for each size
     heightbreakpoints = []; //Height minimums for each size
+    smallTextSizes = [];
+    medTextSizes = [];
+    bigTextSizes = [];
     for (var i = 0; i < cardwidths.length; i++) {
         cardwidthmins[i] = 0.15 * cardwidths[i];
         cardheights[i] = 1.4 * cardwidths[i];
@@ -259,6 +265,9 @@
         pagemargins[i] = Math.min(10, 0.12 * cardwidths[i]);
         widthbreakpoints[i] = 2 * deckwidths[i] + handmins[i] + 0.5 * cardwidths[i] + 3 * standardmargins[i];
         heightbreakpoints[i] = 3 * deckheights[i] + buttonheights[i] + 3 * standardmargins[i];
+        smallTextSizes[i] = cardwidths[i] / 60;
+        medTextSizes[i] = smallTextSizes[i] * 1.5;
+        bigTextSizes[i] = smallTextSizes[i] * 3;
     }
     //Variables
     width = 0; //Total screen dimensions, set on window sizing events
@@ -286,6 +295,10 @@
             }
             size = i;
         }
+        //Set text size
+        $('.smallText').css("font-size", smallTextSizes[size] + "em");
+        $('.medText').css("font-size", medTextSizes[size] + "em");
+        $('.bigText').css("font-size", bigTextSizes[size] + "em");
         //Set element sizes
         setSize('.card', cardwidths[size], cardheights[size]);
         setSize('.emptyCard', cardwidths[size], cardheights[size]);
@@ -323,6 +336,7 @@
 
         //Action buttons - at end so that we can grab scrollwidth after all the gameboard elements have their positions set
         setSize('.actionButtons', width, buttonheights[size] + 2 * standardmargins[size]);
+        $('.actionButtons').css("left", pagemargins[size]);
         $('#buttonSpace').css("height", buttonheights[size] + 2 * standardmargins[size]);
         calculateButtonWidth();
         $('.actionButton').css("height", buttonheights[size]);
@@ -353,6 +367,15 @@
         e(action).hide();
         calculateButtonWidth();
     }
+    isActionEnabled = function (action) {
+        var displaystatus = "displayed";
+        e(action).attr("style").split(';').forEach(function (property, index) {
+            if (property.indexOf("display") != -1) {
+                displaystatus = property;
+            }
+        });
+        return (displaystatus.indexOf("none") == -1);
+    }
     clearActions = function () {
         var actions = $('.actionButtons button');
         for (var i = 0; i < actions.length; i++) {
@@ -360,13 +383,12 @@
         }
     }
     calculateButtonWidth = function () {
-        var actions = $('.actionButtons button');
         var enabledActionCount = 0;
-        for (var i = 0; i < actions.length; i++) {
-            if (!e(actions[i].id).css("display") == "none") {
+        ["Take", "Use", "Discard", "Kings", "UseforKing", "EndTurn"].forEach(function (action, index) {
+            if (isActionEnabled(action)) {
                 enabledActionCount += 1;
             }
-        }
+        });
         buttonWidth = Math.min((width - 20) / enabledActionCount - 2 * standardmargins[size], buttonWidthMaxs[size]);
         $('.actionButton').css("width", buttonWidth);
     }
@@ -417,6 +439,7 @@
                     addCardGraphic(idOfNewTop, isFront);
                 } else {
                     e(this.id).append(getCardHole());
+                    setSize('.emptyCard', cardwidths[size], cardheights[size]);
                 }
                 this.redraw();
             }
@@ -888,14 +911,16 @@
     queenPause = false;
     queenPlayerName = null;
     //King overlay objects
-    kHand = new CardBar("kHandCards", true);
+    kHand = new CardBar("kHandCards", true); //Needed cards
     kTable = new CardBar("kTableCards", true);
     kPlayer = new CardBar("kPlayerCards", true);
-    kHand.offsetElement = "kingContent";
+    kHand.offsetElement = "kingContent"; //For callibrating cardBar click calculations
     kTable.offsetElement = "kingContent";
     kPlayer.offsetElement = "kingContent";
-    kSourceHand = [];
-    kSourceTable = [];
+    kSourceHand = []; //Card locations at start of turn (for ensuring the don't-be-a-dick rule, even
+    kSourceTable = [];// when reloading page after disconnect [mirrored in database])
+    kOuterClick = false; // Flag used to detect clicks outside middle area of kings overlay
+    askedfor = []; //Keeps track of cards asked for, by player (lost on disconnect; it's not crucial)
 
     // Links for redraw convenience
     drawables = [];
@@ -951,9 +976,11 @@
 
         //Other players
         otherPlayers = [];
+        askedfor = [];
         for (var i = 0; i < pgs.OtherPlayers.length; i++) {
             opName = pgs.OtherPlayers[i].PlayerName;
             op = null;
+            askedfor.push([]);
 
             //Find/create other player
             if ($('#' + opName).length == 0) {
@@ -1003,7 +1030,6 @@
     }
 
     updateKingsOverlay = function () {
-        console.log("Updating kings overlay");
         //Populate kings overlay cardbars
         kHand.clear();
         kTable.clear();
@@ -1034,7 +1060,6 @@
                 }
             });
             kSourceTable.forEach(function (cardId, index) {
-                console.log("ksourcing from table: " + cardId);
                 var number = getCardNumber(cardId);
                 var suit = getCardSuit(cardId);
                 if (number == 11 && suits.indexOf(suit) >= 2) {
@@ -1044,17 +1069,32 @@
                 if (ind == -1) {
                     return;
                 }
-                console.log("It's needed");
                 neededCards.splice(ind, 1);
                 ind = (table.cardList.indexOf(cardId));
-                console.log("Index in table: " + ind);
                 if (ind != -1) {
                     kTable.pushCard(getCardId(number, suit, "kTable"));
                 }
             });
             neededCards.forEach(function (number, index) {
-                kPlayer.pushCard(getCardId(number, suits[Math.floor(Math.random() * 4)], "kPlayer-" + index));
+                var redsonly = (number == 11);
+                kPlayer.pushCard(getCardId(number, suits[Math.floor(Math.random() * (redsonly?2:4))], "kPlayer-" + index));
             });
+        }
+        //Collapsing empty sections
+        if (kHand.cardList.length == 0) {
+            e("kHand").hide();
+        } else {
+            e("kHand").show();
+        }
+        if (kTable.cardList.length == 0) {
+            e("kTable").hide();
+        } else {
+            e("kTable").show();
+        }
+        if (kPlayer.cardList.length == 0) {
+            e("kPlayer").hide();
+        } else {
+            e("kPlayer").show();
         }
     }
 
@@ -1233,27 +1273,19 @@
                     pga.hand.forEach(function (cardobj, index) {
                         var cardId = getCardId(cardobj.number, cardobj.suit, "");
                         table.removeCard(cardId);
-                        //var cardKId = getCardId(cardobj.number, cardobj.suit, "kTable");
-                        //kTable.removeCard(cardKId);
                     });
                 } else {
                     if (pga.misc == playerName) {
                         pga.hand.forEach(function (cardobj, index) {
                             var cardId = getCardId(cardobj.number, cardobj.suit, "");
-                            console.log("removing cardid " + cardId + " from hand");
                             hand.removeCard(cardId);
-                            //var cardKId = getCardId(cardobj.number, cardobj.suit, "kHand");
-                            //kHand.removeCard(cardKId);
                         });
                     } else {
                         for (var i = 0; i < otherPlayers.length; i++) {
                             if (otherPlayers[i].name == pga.misc) {
+                                updateAskedFor(pga.misc);
                                 pga.hand.forEach(function (cardobj, index) {
                                     otherPlayers[i].hand.popCard();
-                                    console.log("removing card from other player's hand");
-                                    //var cardKId = getCardId(cardobj.number, cardobj.suit, "kPlayer");
-                                    //var idMatch = kPlayer.findPartialMatchID(cardKId);
-                                    //kPlayer.removeCard(idMatch);
                                 });
                             }
                         }
@@ -1302,19 +1334,14 @@
                 });
                 //Remove completed kings and collect cards
                 var collectedCards = [];
-                console.log("Completed kings:");
-                console.log(completedKings);
                 for (var i = completedKings.length - 1; i >= 0; i--) {
                     if (completedKings[i] == "complete") {
-                        console.log("processing a complete king at ind " + i);
                         playersKings.kings[i].cardList.forEach(function (cardId, index) {
                             collectedCards.push(cardId);
                         });
                         playersKings.removeKingByIndex(i);
                     }
                 }
-                console.log("Collected cards:");
-                console.log(collectedCards);
                 for (var i = 0; i < collectedCards.length; i++) {
                     if (pga.playerName == playerName) {
                         if (isPointCard(collectedCards[i])) {
@@ -1421,12 +1448,12 @@
             case "useJ":
                 if (pga.playerName == playerName) {
                     hand.removeCard(getCardId(11, "spades", ""));
-                    pointCardPile.pushBlankCard();
+                    pointCardPile.pushCard(null);
                 } else {
                     for (var i = 0; i < otherPlayers.length; i++) {
                         if (otherPlayers[i].name == pga.playerName) {
                             otherPlayers[i].hand.popCard();
-                            otherPlayers[i].pointCardPile.pushBlankCard();
+                            otherPlayers[i].pointCardPile.pushCard(null);
                         }
                     }
                 }
@@ -1471,6 +1498,11 @@
                     });
                     table.cardList.forEach(function (cardId, index) {
                         kSourceTable.push(cardId);
+                    });
+                    //Updating askedfor matrix
+                    askedfor = [];
+                    otherPlayers.forEach(function (a, b) {
+                        askedfor.push([]);
                     });
                     updateKingsOverlay();
                 } else {
@@ -1564,14 +1596,14 @@
                 total -= getCardNumber(cardId);
             });
             if (total == 0) {
-                enableAction("Take");
+                if (hand.cardList.length != 0) {
+                    enableAction("Take");
+                }
             }
         }
         // Use for King
         var onlySelectedHand = hand.getSelected(false);
         var onlySelectedTable = table.getSelected(false);
-        console.log(onlySelectedHand);
-        console.log(onlySelectedTable);
         if (onlySelectedHand.length != 0 || onlySelectedTable.length != 0) {
             var canUseForKings = true;
             onlySelectedHand.forEach(function (cardId, index) {
@@ -1597,7 +1629,6 @@
     }
 
     askFromPlayer = function (playerToAsk) {
-        console.log("Use from player " + playerToAsk);
         var askedForCards = [];
         var selectedCards = kPlayer.getSelected(true);
         selectedCards.forEach(function (cardId, index) {
@@ -1605,6 +1636,61 @@
         });
         var update = JSON.stringify(new GameAction("ask", askedForCards, null, playerToAsk));
         hub.server.gameAction(roomCode, update);
+    }
+
+    hub.client.nothingFrom = function (otherPlayerName) {
+        console.log("Nothing from " + otherPlayerName);
+        updateAskedFor(otherPlayerName);
+    }
+    updateAskedFor = function(otherPlayerName) {
+        var ind = -1;
+        otherPlayers.forEach(function (oPlayer, index) {
+            if (oPlayer.name == otherPlayerName) {
+                ind = index;
+            }
+        });
+        if (ind != -1) {
+            kPlayer.getSelected(true).forEach(function (cardId, index) {
+                if (askedfor[ind].indexOf(getCardNumber(cardId)) == -1) {
+                    askedfor[ind].push(getCardNumber(cardId));
+                }
+            });
+            //Reevaluate grey state
+            console.log(askedfor);
+        }
+    }
+
+    showKingOverlay = function () {
+        if (isActionEnabled("Kings")) {
+            history.pushState({ srn: "Game", rc: roomCode, sub: "king" }, "Game - " + roomCode, window.location);
+            clearActions();
+            $('.kingOverlay').show();
+            return true;
+        }
+        return false;
+    }
+    hideKingOverlay = function () {
+        if (!$('.kingOverlay')[0].hidden) {
+            $('.kingOverlay').hide();
+            updateActions();
+            return true;
+        }
+        return false;
+    }
+
+    //Methods for registering a click outside the king overlay. A click on any part of the overlay (inside or outside)
+    // triggers one click event, and a click on only the inner part triggers the other. If the first happens but not
+    // the second, then it's a click outside.
+    kingOverlayOuterClick = function () {
+        if (kOuterClick) {
+            kOuterClick = false;
+            if (history.state != null && history.state.sub == "king") {
+                window.history.back();
+            }
+        }
+    }
+    kingOverlayInnerClick = function () {
+        kOuterClick = false;
     }
 
     $(document).ready(function () {
@@ -1641,10 +1727,7 @@
                     break;
                 case 11:
                     //The logic for showing the Use action in the first place takes care of checking that this is the jack of spades
-                    console.log("Other players: ");
-                    console.log(otherPlayers);
                     if (otherPlayers.length == 1) {
-                        console.log("Victim name: " + otherPlayers[0].playerName);
                         update = JSON.stringify(new GameAction("useJ", null, null, otherPlayers[0].name));
                     } else {
                         //choose player
@@ -1707,8 +1790,7 @@
             hub.server.gameAction(roomCode, update2);
         });
         $('#Kings').on('click', function () {
-            clearActions();
-            $('.kingOverlay').show();
+            showKingOverlay();
         });
         $('.kButton').on('click', function () {
             switch (this.id) {
@@ -1754,13 +1836,24 @@
                     break;
             }
         });
-        $('.pButton').on('click', function () {
+        $('#kPlayerMenu').on('click', '.pButton', function () {
             var playerToAsk = this.innerHTML;
             askFromPlayer(playerToAsk);
         });
         $('.kClose').on('click', function () {
-            $('.kingOverlay').hide();
-            updateActions();
+            if (history.state != null && history.state.sub == "king") {
+                window.history.back();
+            }
+        });
+        $('#ThisPlayerKings').on('click', function () {
+            showKingOverlay();
+        });
+        $('.kingOverlay').on('click', function () {
+            kOuterClick = true;
+            setTimeout(kingOverlayOuterClick, 5);
+        });
+        $('#kingContent').on('click', function () {
+            setTimeout(kingOverlayInnerClick, 3);
         });
     });
 });

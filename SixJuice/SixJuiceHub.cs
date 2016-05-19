@@ -267,7 +267,7 @@ namespace SixJuice
                 case "ask":
                     Game game = await _db.GetGame(roomCode);
                     var matches = new List<Card>();
-                    var neededNumbers = result.hand.Select(c => c.number);
+                    var neededNumbers = result.hand.Select(c => c.number).ToList();
                     foreach(Card card in game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand)
                     {
                         if(neededNumbers.Contains(card.number))
@@ -277,10 +277,12 @@ namespace SixJuice
                                 continue;
                             }
                             matches.Add(card);
+                            neededNumbers.Remove(card.number);
                         }
                     }
                     if(matches.Count == 0)
                     {
+                        Clients.Caller.nothingFrom(result.misc);
                         break;
                     }
                     Card[] copydest = new Card[matches.Count];

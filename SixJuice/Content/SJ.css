@@ -3,12 +3,10 @@
     margin: 0px;
 }
 
-.SJNav {
-    position:absolute;
-    width: 98%;
-    margin-top: 0.5em;
-    z-index: 200;
-    pointer-events: none;
+.queenOverlay {
+    position: absolute;
+    z-index: 90;
+    background-color: rgba(10, 0, 10, 0.09);
 }
 
 .actionButtonOverlay {
@@ -25,16 +23,46 @@
     background-color: rgba(10, 0, 10, 0.09);
 }
 
-.queenOverlay {
-    position: absolute;
-    z-index: 90;
-    background-color: rgba(10, 0, 10, 0.09);
+.waitOverlay {
+    position:absolute;
+    background-color:rgba(0, 0, 0, 0.3);
+    z-index: 125;
 }
 
 .kingOverlay {
     position: absolute;
     z-index: 130;
     background-color: rgba(10, 0, 10, 0.09);
+}
+
+.SJMenu {
+    position:absolute;
+    width: 100%;
+    height: 0%;
+    z-index: 150;
+    background-color:rgba(200, 195, 200, 0.7);
+    transition: 0.3s;
+    overflow-y:hidden;
+}
+
+.SJNav {
+    position:absolute;
+    width: 98%;
+    margin-top: 0.5em;
+    z-index: 200;
+    pointer-events: none;
+}
+
+.SJNavButton {
+    float: right;
+    height: 3.5em;
+    width: 3.5em;
+    background-color: #808080;
+    border: 1px solid #000000;
+    padding: 4px;
+    border-radius: 10%;
+    pointer-events: visible;
+    z-index: 200;
 }
 
 #kingContent {
@@ -61,21 +89,8 @@
     padding: 4px;
 }
 
-.SJNavButton {
-    float: right;
-    height: 3.5em;
-    width: 3.5em;
-    background-color: #808080;
-    border: 1px solid #000000;
-    padding: 4px;
-    border-radius: 10%;
-    pointer-events: visible;
-    z-index: 200;
-}
-
 .actionButtons {
     width: 98%;
-    /*margin: 10px;*/
     position: absolute;
     bottom: 0;
 }
@@ -93,16 +108,6 @@
 
 .SJIcon-barHighlight {
     background-color: #97ffdf;
-}
-
-.SJMenu {
-    position:absolute;
-    width: 100%;
-    height: 0%;
-    z-index: 150;
-    background-color:rgba(200, 195, 200, 0.7);
-    transition: 0.3s;
-    overflow-y:hidden;
 }
 
 .queenButtons {
@@ -134,12 +139,6 @@
 .SJBody {
     position:absolute;
     background-color: #f8f8f8;
-}
-
-.waitOverlay {
-    position:absolute;
-    background-color:rgba(0, 0, 0, 0.3);
-    z-index: 125;
 }
 
 .overlayContent {
