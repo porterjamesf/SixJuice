@@ -79,6 +79,9 @@
     position: absolute;
     border: 1px solid black;
     padding: 5px;
+    background-color: #A0A0A0;
+    z-index: 1;
+    pointer-events: visible;
 }
 
 .kClose {
@@ -210,18 +213,23 @@
     display: block;
 }
 
+.xsmlText {
+    font-size: 0.9em;
+    font-weight: 300;
+}
+
 .smallText {
     font-size: 1.2em;
     font-weight: 400;
 }
 
 .medText {
-    font-size: 1.7em;
+    font-size: 1.8em;
     font-weight:600;
 }
 
 .bigText {
-    font-size: 3.5em;
+    font-size: 3.6em;
     font-weight: 800;
 }
 
@@ -300,9 +308,4 @@
 .pButton {
     position: relative;
     overflow: hidden;
-}
-
-#kPlayerMenu {
-    background-color: #A0A0A0;
-    z-index: 1;
 }

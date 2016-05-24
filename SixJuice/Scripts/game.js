@@ -36,17 +36,6 @@
                 queenPause = true;
             }
         }
-
-        //Generation of player buttons
-        if (playerInfo.length == 2) {
-            $('#kPlayerDrop').text("Ask");
-        } else {
-            for (var i = 0; i < playerInfo.length; i++) {
-                if (playerInfo[i].playerName != playerName) {
-                    $('#kPlayerMenu').append('<button class="pButton smallText">' + playerInfo[i].playerName + '</button>');
-                }
-            }
-        }
     }
 
     //Identifies this connection to the server, associating it with the room and player
@@ -246,6 +235,7 @@
     pagemargins = [];       //Margin on page outer border
     widthbreakpoints = [];  //Width minimums for each size
     heightbreakpoints = []; //Height minimums for each size
+    xsmlTextSizes = [];     //Sizing for text elements
     smallTextSizes = [];
     medTextSizes = [];
     bigTextSizes = [];
@@ -266,6 +256,7 @@
         widthbreakpoints[i] = 2 * deckwidths[i] + handmins[i] + 0.5 * cardwidths[i] + 3 * standardmargins[i];
         heightbreakpoints[i] = 3 * deckheights[i] + buttonheights[i] + 3 * standardmargins[i];
         smallTextSizes[i] = cardwidths[i] / 60;
+        xsmlTextSizes[i] = smallTextSizes[i] * 0.75;
         medTextSizes[i] = smallTextSizes[i] * 1.5;
         bigTextSizes[i] = smallTextSizes[i] * 3;
     }
@@ -296,6 +287,7 @@
             size = i;
         }
         //Set text size
+        $('.xsmlText').css("font-size", xsmlTextSizes[size] + "em");
         $('.smallText').css("font-size", smallTextSizes[size] + "em");
         $('.medText').css("font-size", medTextSizes[size] + "em");
         $('.bigText').css("font-size", bigTextSizes[size] + "em");
@@ -327,7 +319,7 @@
         setSize('.pButton', kButtonWidth, buttonheights[size]);
         setPosition('.kButton', calcedKBarWidth + standardmargins[size], (deckheights[size] - buttonheights[size]) / 2);
         $('.kCardBar').css("width", calcedKBarWidth);
-        $('#kPlayerMenu').css("width", kButtonWidth);
+        $('.kPlayerChooser').css("width", kButtonWidth);
         $('#kPlayerMenu').css("left", calcedKBarWidth + standardmargins[size] - 10);
 
         drawables.forEach(function (drawable, index) {
@@ -1025,8 +1017,17 @@
             op.kings.clearAndImport(pgs.OtherPlayers[i].Kings);
         }
 
+        //Generation of player buttons
+        if (otherPlayers.length == 1) {
+            $('#kPlayerDrop').text("Ask");
+        } else {
+            for (var i = 0; i < otherPlayers.length; i++) {
+                $('#kPlayerMenu').append('<button id="' + otherPlayers[i].name + 'PlayerButton" class="pButton xsmlText">' + otherPlayers[i].name + '</button>');
+                $('#josPlayerMenu').append('<button id="' + otherPlayers[i].name + 'JOSPlayerButton" class="pButton xsmlText">' + otherPlayers[i].name + '</button>');
+            }
+        }
+
         resize(window.innerWidth, window.innerHeight);
-        //updateActions();
     }
 
     updateKingsOverlay = function () {
@@ -1242,9 +1243,8 @@
                 }
                 if (pga.playerName == playerName) {
                     updateKingsOverlay();
+                    updateActions();
                 }
-                //Update actions
-                updateActions();
                 break;
             case "useK":
                 var kingID = getCardId(pga.hand[0].number, pga.hand[0].suit, "");
@@ -1254,6 +1254,8 @@
                     //Playing king
                     kings.pushKing(kingID);
                     updateKingsOverlay();
+                    updateAskEnablement();
+                    updateActions();
                 } else {
                     for (var i = 0; i < otherPlayers.length; i++) {
                         if (otherPlayers[i].name == pga.playerName) {
@@ -1264,8 +1266,6 @@
                         }
                     }
                 }
-                //Update actions
-                updateActions();
                 break;
             case "u4K":
                 //Remove used cards, from both game boards and kings overlay
@@ -1364,8 +1364,8 @@
                 //Update actions
                 if (pga.playerName == playerName) {
                     updateKingsOverlay();
+                    updateActions();
                 }
-                updateActions();
                 break;
             case "endQ":
                 //Stop count down
@@ -1442,8 +1442,8 @@
                 //Update actions
                 if (pga.playerName == playerName) {
                     updateKingsOverlay();
+                    updateActions();
                 }
-                updateActions();
                 break;
             case "useJ":
                 if (pga.playerName == playerName) {
@@ -1465,6 +1465,9 @@
                             otherPlayers[i].pointCardPile.popCard();
                         }
                     }
+                }
+                if (pga.playerName == playerName) {
+                    updateActions();
                 }
                 break;
             case "discard":
@@ -1505,6 +1508,7 @@
                         askedfor.push([]);
                     });
                     updateKingsOverlay();
+                    updateAskEnablement();
                 } else {
                     for (var i = 0; i < otherPlayers.length; i++) {
                         if (otherPlayers[i].name == pga.misc) {
@@ -1655,8 +1659,42 @@
                     askedfor[ind].push(getCardNumber(cardId));
                 }
             });
+            updateAskEnablement();
+        }
+    }
+    updateAskEnablement = function () {
+        var everyone = (otherPlayers.length > 1 ? true : null);
+        otherPlayers.forEach(function (oPlayer, ind) {
             //Reevaluate grey state
-            console.log(askedfor);
+            var stillSomeLeft = false;
+            for (var i = 0; i < kPlayer.cardList.length; i++) {
+                if (askedfor[ind].indexOf(getCardNumber(kPlayer.cardList[i])) == -1) {
+                    stillSomeLeft = true;
+                    break;
+                }
+            }
+            if (stillSomeLeft) {
+                if (otherPlayers.length == 1) {
+                    e('kPlayerDrop').prop('disabled', false);
+                } else {
+                    e(oPlayer.name + "PlayerButton").prop('disabled', false);
+                    everyone = false;
+                }
+            } else {
+                if (otherPlayers.length == 1) {
+                    e('kPlayerDrop').prop('disabled', true);
+                } else {
+                    e(oPlayer.name + "PlayerButton").prop('disabled', true);
+                }
+            }
+        });
+        if (otherPlayers.length > 1) {
+            if (everyone) {
+                e('kPlayerDrop').prop('disabled', true);
+                e('kPlayerMenu').hide();
+            } else {
+                e('kPlayerDrop').prop('disabled', false);
+            }
         }
     }
 
@@ -1715,7 +1753,7 @@
             hub.server.gameAction(roomCode, update);
         });
         $('#Use').on('click', function () {
-            clearActions();
+            var clear = true;
             var usedCard = new CardObj(hand.getSelected(true)[0]);
             var update = null;
             switch (usedCard.number) {
@@ -1730,13 +1768,37 @@
                     if (otherPlayers.length == 1) {
                         update = JSON.stringify(new GameAction("useJ", null, null, otherPlayers[0].name));
                     } else {
-                        //choose player
-                        console.log("Choose player pop-up should happen now");
+                        var otherPlayerWithPoint = null;
+                        for (var i = 0; i < otherPlayers.length; i++) {
+                            if (otherPlayers[i].pointCardPile.cardList.length > 0) {
+                                if (otherPlayerWithPoint != null) { //Multiple other players with points
+                                    otherPlayerWithPoint = null; //Set to null to indicate the need for the menu
+                                    break;                          // and break.
+                                }
+                                otherPlayerWithPoint = otherPlayers[i].name;
+                            }
+                        }
+                        if (otherPlayerWithPoint != null) { //Only one other player with point
+                            update = JSON.stringify(new GameAction("useJ", null, null, otherPlayerWithPoint));
+                            break;
+                        }
+                        //Choose player with menu
+                        $('#josPlayerMenu button').show();
+                        setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
+                        if (e('josPlayerMenu').css("display") == "none") {
+                            e('josPlayerMenu').show();
+                        } else {
+                            e('josPlayerMenu').hide();
+                        }
+                        clear = false;
                     }
                     break;
                 default:
                     console.log("Use " + usedCard.number + " of " + usedCard.suit);
                     break;
+            }
+            if (clear) {
+                clearActions();
             }
             if (update != null) {
                 hub.server.gameAction(roomCode, update);
@@ -1840,6 +1902,12 @@
             var playerToAsk = this.innerHTML;
             askFromPlayer(playerToAsk);
         });
+        $('#josPlayerMenu').on('click', '.pButton', function () {
+            clearActions();
+            e('josPlayerMenu').hide();
+            var update = JSON.stringify(new GameAction("useJ", null, null, this.innerHTML));
+            hub.server.gameAction(roomCode, update);
+        });
         $('.kClose').on('click', function () {
             if (history.state != null && history.state.sub == "king") {
                 window.history.back();
@@ -1851,9 +1919,13 @@
         $('.kingOverlay').on('click', function () {
             kOuterClick = true;
             setTimeout(kingOverlayOuterClick, 5);
+            console.log("ko click");
         });
         $('#kingContent').on('click', function () {
             setTimeout(kingOverlayInnerClick, 3);
+        });
+        $('.gameBoard').on('click', function () {
+            console.log("gameboard click");
         });
     });
 });
