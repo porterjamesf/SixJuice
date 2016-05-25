@@ -333,6 +333,14 @@
         calculateButtonWidth();
         $('.actionButton').css("height", buttonheights[size]);
         $('.actionButton').css("margin", standardmargins[size] + "px");
+
+        //Player menu positions
+        if (e('josPlayerMenu').css("display") != "none") {
+            setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
+        }
+        if ($('#kPlayerMenu').css("display") != "none") {
+            $('#kPlayerMenu').css("top", (deckheights[size] - buttonheights[size]) / 2 - $('#kPlayerMenu').height() - 10);
+        }
     }
     calculateKingAndPlayerWidths = function () {
         $('.king').css("top", deckmargins[size] + rowmargins[size]);
@@ -389,14 +397,22 @@
 
     updateTurn = function () {
         if (whosTurn == playerName) {
-            $('.notYourTurn').hide();
-            $('.actionButtonOverlay').show();
             updateActions();
+            if (checkForDone()) {
+                hub.server.imDone(roomCode, playerName);
+            } else {
+                $('.notYourTurn').hide();
+                $('.actionButtonOverlay').show();
+            }
         } else {
             $('.notYourTurn').show();
             $('.actionButtonOverlay').hide();
             $('.cardSelected').removeClass('cardSelected');
         }
+    }
+
+    hub.client.gameOver = function () {
+        console.log("Game Over");
     }
 
     //---------CLASSES------------
@@ -432,6 +448,7 @@
                 } else {
                     e(this.id).append(getCardHole());
                     setSize('.emptyCard', cardwidths[size], cardheights[size]);
+                    setPosition('.emptyCard', deckmargins[size], deckmargins[size]);
                 }
                 this.redraw();
             }
@@ -506,10 +523,11 @@
         this.downpos = -1; //Click start position
         this.dragged = false;
         this.offsetElement = null; //id for first ancestor that is absolute with a relative parent. If not set, it's just this.id.
+                                //Also, if this is set, selections won't trigger updateActions() (since it's not a gameboard cardBar)
         // Display fields
         this.width = 0; //Width of element, set by HTML
         this.baseWidth = 0; //Baseline width per card, calculated each redraw
-        this.listener = null; //Another 
+        //this.listener = null; //Another 
 
         //-----General methods-----
         // Adds card to end of list
@@ -577,7 +595,9 @@
             } else {
                 cardE.addClass("cardSelected");
             }
-            updateActions();
+            if (this.offsetElement == null) {
+                updateActions();
+            }
         }
         // Returns list of selected cards
         this.getSelected = function (noneIsAll) {
@@ -911,6 +931,8 @@
     kPlayer.offsetElement = "kingContent";
     kSourceHand = []; //Card locations at start of turn (for ensuring the don't-be-a-dick rule, even
     kSourceTable = [];// when reloading page after disconnect [mirrored in database])
+    kNeededHand = []; // Numbers needed for kings
+    kNeededTable = []; // Numbers needed for kings that aren't in hand
     kOuterClick = false; // Flag used to detect clicks outside middle area of kings overlay
     askedfor = []; //Keeps track of cards asked for, by player (lost on disconnect; it's not crucial)
 
@@ -1043,7 +1065,9 @@
                     neededCards.push(number);
                 });
             }
-            //Look at hand
+            var neededNumMatches = [];
+            kNeededHand = neededCards.slice(0);
+            kNeededTable = kNeededHand.slice(0);
             kSourceHand.forEach(function (cardId, index) {
                 var number = getCardNumber(cardId);
                 var suit = getCardSuit(cardId);
@@ -1054,12 +1078,24 @@
                 if (ind == -1) {
                     return;
                 }
-                neededCards.splice(ind, 1);
+                //neededCards.splice(ind, 1);
+                neededNumMatches.push(number);
                 ind = (hand.cardList.indexOf(cardId));
                 if (ind != -1) {
                     kHand.pushCard(getCardId(number, suit, "kHand"));
                 }
+                ind = kNeededTable.indexOf(number);
+                if (ind != -1) {
+                    kNeededTable.splice(ind, 1);
+                }
             });
+            neededNumMatches.forEach(function (num, index) {
+                var ind = neededCards.indexOf(num);
+                if (ind != -1) {
+                    neededCards.splice(ind, 1);
+                }
+            });
+            neededNumMatches = [];
             kSourceTable.forEach(function (cardId, index) {
                 var number = getCardNumber(cardId);
                 var suit = getCardSuit(cardId);
@@ -1070,10 +1106,17 @@
                 if (ind == -1) {
                     return;
                 }
-                neededCards.splice(ind, 1);
+                //neededCards.splice(ind, 1);
+                neededNumMatches.push(number);
                 ind = (table.cardList.indexOf(cardId));
                 if (ind != -1) {
                     kTable.pushCard(getCardId(number, suit, "kTable"));
+                }
+            });
+            neededNumMatches.forEach(function (num, index) {
+                var ind = neededCards.indexOf(num);
+                if (ind != -1) {
+                    neededCards.splice(ind, 1);
                 }
             });
             neededCards.forEach(function (number, index) {
@@ -1097,6 +1140,7 @@
         } else {
             e("kPlayer").show();
         }
+        updateKingsButtonText();
     }
 
     // Starts a queen count down from the beginning
@@ -1247,24 +1291,28 @@
                 }
                 break;
             case "useK":
-                var kingID = getCardId(pga.hand[0].number, pga.hand[0].suit, "");
+                pga.hand.forEach(function (cardobj, index) {
+                    var kingID = getCardId(cardobj.number, cardobj.suit, "");
+                    if (pga.playerName == playerName) {
+                        //Removing king from hand
+                        hand.removeCard(kingID);
+                        //Playing king
+                        kings.pushKing(kingID);
+                    } else {
+                        for (var i = 0; i < otherPlayers.length; i++) {
+                            if (otherPlayers[i].name == pga.playerName) {
+                                //Removing a card from hand
+                                otherPlayers[i].hand.popCard();
+                                //Playing king
+                                otherPlayers[i].kings.pushKing(kingID);
+                            }
+                        }
+                    }
+                });
                 if (pga.playerName == playerName) {
-                    //Removing king from hand
-                    hand.removeCard(kingID);
-                    //Playing king
-                    kings.pushKing(kingID);
                     updateKingsOverlay();
                     updateAskEnablement();
                     updateActions();
-                } else {
-                    for (var i = 0; i < otherPlayers.length; i++) {
-                        if (otherPlayers[i].name == pga.playerName) {
-                            //Removing a card from hand
-                            otherPlayers[i].hand.popCard();
-                            //Playing king
-                            otherPlayers[i].kings.pushKing(kingID);
-                        }
-                    }
                 }
                 break;
             case "u4K":
@@ -1364,7 +1412,9 @@
                 //Update actions
                 if (pga.playerName == playerName) {
                     updateKingsOverlay();
-                    updateActions();
+                    if ($('.kingOverlay').css("display") == "none") {
+                        updateActions();
+                    }
                 }
                 break;
             case "endQ":
@@ -1440,7 +1490,7 @@
                     }
                 }
                 //Update actions
-                if (pga.playerName == playerName) {
+                if (theQueenPlayer == playerName) {
                     updateKingsOverlay();
                     updateActions();
                 }
@@ -1494,19 +1544,20 @@
                         drawpile.popCard();
                     }
                     //Updating kSources
-                    kSourceHand = [];
+                    //kSourceHand = [];
+                    kSourceHand = hand.cardList.slice(0);
                     kSourceTable = [];
-                    hand.cardList.forEach(function (cardId, index) {
-                        kSourceHand.push(cardId);
-                    });
+                    //hand.cardList.forEach(function (cardId, index) {
+                    //    kSourceHand.push(cardId);
+                    //});
                     table.cardList.forEach(function (cardId, index) {
                         kSourceTable.push(cardId);
                     });
                     //Updating askedfor matrix
-                    askedfor = [];
-                    otherPlayers.forEach(function (a, b) {
-                        askedfor.push([]);
-                    });
+                    //askedfor = [];
+                    //otherPlayers.forEach(function (a, b) {
+                    //    askedfor.push([]);
+                    //});
                     updateKingsOverlay();
                     updateAskEnablement();
                 } else {
@@ -1515,6 +1566,12 @@
                             for (var j = 0; j < pga.table.length; j++) {
                                 otherPlayers[i].hand.pushBlankCard();
                                 drawpile.popCard();
+                            }
+                            if (pga.table.length > 0) {
+                                console.log("Clearing af[] for " + otherPlayers[i].name);
+                                askedfor[i] = [];
+                            } else {
+                                console.log("No cards drawn by " + otherPlayers[i].name);
                             }
                         }
                     }
@@ -1604,20 +1661,48 @@
                     enableAction("Take");
                 }
             }
+        } else { //Multiple cards selected that include non-numbered cards
+            var allKings = true; // Check for case of all kings selected
+            selectedHand.forEach(function (cardId, index) {
+                if (getCardNumber(cardId) != 13) {
+                    allKings = false;
+                }
+            });
+            if (allKings) {
+                if (hand.cardList.length != 0) {
+                    enableAction("Use");
+                }
+            }
         }
         // Use for King
         var onlySelectedHand = hand.getSelected(false);
         var onlySelectedTable = table.getSelected(false);
         if (onlySelectedHand.length != 0 || onlySelectedTable.length != 0) {
             var canUseForKings = true;
+            var neededNumbers = kNeededHand.slice(0);
             onlySelectedHand.forEach(function (cardId, index) {
                 if (!kHand.hasCard(cardId)) {
                     canUseForKings = false;
+                } else {
+                    var ind = neededNumbers.indexOf(getCardNumber(cardId));
+                    if (ind != -1) {
+                        neededNumbers.splice(ind, 1);
+                    } else {
+                        canUseForKings = false;
+                    }
                 }
             });
+            neededNumbers = kNeededTable.slice(0);
             onlySelectedTable.forEach(function (cardId, index) {
                 if (!kTable.hasCard(cardId)) {
                     canUseForKings = false;
+                } else {
+                    var ind = neededNumbers.indexOf(getCardNumber(cardId));
+                    if (ind != -1) {
+                        neededNumbers.splice(ind, 1);
+                    } else {
+                        canUseForKings = false;
+                    }
                 }
             });
             if (canUseForKings) {
@@ -1663,14 +1748,18 @@
         }
     }
     updateAskEnablement = function () {
+        console.log("Update ask enablement:");
+        console.log(askedfor);
         var everyone = (otherPlayers.length > 1 ? true : null);
         otherPlayers.forEach(function (oPlayer, ind) {
             //Reevaluate grey state
             var stillSomeLeft = false;
             for (var i = 0; i < kPlayer.cardList.length; i++) {
                 if (askedfor[ind].indexOf(getCardNumber(kPlayer.cardList[i])) == -1) {
-                    stillSomeLeft = true;
-                    break;
+                    if (oPlayer.hand.cardList.length > 0) {
+                        stillSomeLeft = true;
+                        break;
+                    }
                 }
             }
             if (stillSomeLeft) {
@@ -1696,6 +1785,17 @@
                 e('kPlayerDrop').prop('disabled', false);
             }
         }
+        updateKingsButtonText();
+    }
+
+    updateKingsButtonText = function () {
+        if(kHand.cardList.length == 0 && kTable.cardList.length == 0 && (
+          e('kPlayerDrop').prop('disabled') || kPlayer.cardList.length == 0)) {
+            e('Kings').text("Kings (done)");
+            //checkForDone();
+        } else {
+            e('Kings').text("Kings");
+        }
     }
 
     showKingOverlay = function () {
@@ -1710,10 +1810,21 @@
     hideKingOverlay = function () {
         if (!$('.kingOverlay')[0].hidden) {
             $('.kingOverlay').hide();
+            e('kPlayerMenu').hide();
             updateActions();
             return true;
         }
         return false;
+    }
+
+    checkForDone = function () {
+        if (e('Kings').text() == "Kings (done)" && drawpile.cardList.length == 0 && hand.cardList.length == 0) {
+            console.log("This player is done");
+            return true;
+        } else {
+            console.log("Not done yet");
+            return false;
+        }
     }
 
     //Methods for registering a click outside the king overlay. A click on any part of the overlay (inside or outside)
@@ -1758,7 +1869,11 @@
             var update = null;
             switch (usedCard.number) {
                 case 13:
-                    update = JSON.stringify(new GameAction("useK", [usedCard], null, null));
+                    var kingsToPlay = [];
+                    hand.getSelected(true).forEach(function (cardId, index) {
+                        kingsToPlay.push(new CardObj(cardId));
+                    });
+                    update = JSON.stringify(new GameAction("useK", kingsToPlay, null, null));
                     break;
                 case 12:
                     update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
@@ -1859,8 +1974,13 @@
                 case "kHandUse":
                     var handCards = [];
                     var selectedCards = kHand.getSelected(true);
+                    var neededNumbers = kNeededHand.slice(0);
                     selectedCards.forEach(function (cardId, index) {
-                        handCards.push(new CardObj(cardId));
+                        var ind = neededNumbers.indexOf(getCardNumber(cardId));
+                        if (ind != -1) {
+                            handCards.push(new CardObj(cardId));
+                            neededNumbers.splice(ind, 1);
+                        }
                     });
                     var update = JSON.stringify(new GameAction("u4K", handCards, null, playerName));
                     hub.server.gameAction(roomCode, update);
@@ -1868,8 +1988,13 @@
                 case "kTableUse":
                     var tableCards = [];
                     var selectedCards = kTable.getSelected(true);
+                    var neededNumbers = kNeededTable.slice(0);
                     selectedCards.forEach(function (cardId, index) {
-                        tableCards.push(new CardObj(cardId));
+                        var ind = neededNumbers.indexOf(getCardNumber(cardId));
+                        if (ind != -1) {
+                            tableCards.push(new CardObj(cardId));
+                            neededNumbers.splice(ind, 1);
+                        }
                     });
                     var update = JSON.stringify(new GameAction("u4K", tableCards, null, "table"));
                     hub.server.gameAction(roomCode, update);

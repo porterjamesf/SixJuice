@@ -105,8 +105,9 @@ namespace SixJuice.Database
         {
             Player player = new Player
             {
-                Ready = false,
                 Name = playerName,
+                Ready = false,
+                Done = false,
                 PointCards = new List<Card>(),
                 NormalCards = new List<Card>(),
                 Hand = new List<Card>(),
@@ -272,17 +273,23 @@ namespace SixJuice.Database
             }
         }
 
-        public async Task PlayKing(string roomCode, string playerName, Card king) {
+        public async Task PlayKings(string roomCode, string playerName, List<Card> kings) {
             var builder = Builders<Game>.Filter;
             var filterThisPlayer = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
-            //Removing king from hand
-            var handUpdate = Builders<Game>.Update.Pull("Players.$.Hand", king);
-            //Adding king to play
-            List<Card> newKing = new List<Card>();
-            newKing.Add(king);
-            var kingUpdate = Builders<Game>.Update.Push("Players.$.Kings", newKing);
-            await games.UpdateOneAsync(filterThisPlayer, handUpdate);
-            await games.UpdateOneAsync(filterThisPlayer, kingUpdate);
+            List<UpdateDefinition<Game>> playerUpdates = new List<UpdateDefinition<Game>>();
+            for (int i = 0; i < kings.Count; i++)
+            {
+                //Removing king from hand
+                playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", kings[i]));
+                //Adding king to play
+                List<Card> newKing = new List<Card>();
+                newKing.Add(kings[i]);
+                playerUpdates.Add(Builders<Game>.Update.Push("Players.$.Kings", newKing));
+            }
+            foreach (UpdateDefinition<Game> update in playerUpdates)
+            {
+                await games.UpdateOneAsync(filterThisPlayer, update);
+            }
         }
 
         public async Task PlayQueen(string roomCode, string playerName, Card queen, List<Card> fromTable) {
@@ -563,6 +570,16 @@ namespace SixJuice.Database
             }
             List<Card>[] result = { pointCards, normalCards };
             return result;
+        }
+
+        public async Task<bool> PlayerDone(string roomCode, string playerName)
+        {
+            var builder = Builders<Game>.Filter;
+            var filterThisPlayer = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
+            var update = Builders<Game>.Update.Set("Players.$.Done", true);
+            await games.UpdateOneAsync(filterThisPlayer, update);
+            //Returns true when all players are done
+            return (await GetGame(roomCode)).Players.Where(p => !p.Done).Count() == 0;
         }
 
         #endregion

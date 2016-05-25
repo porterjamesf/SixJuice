@@ -293,7 +293,7 @@ namespace SixJuice
                     Clients.Group(roomCode).receivePlayerGameAction(JsonConvert.SerializeObject(result));
                     break;
                 case "useK":
-                    await _db.PlayKing(roomCode, result.playerName, result.hand.ElementAt(0));
+                    await _db.PlayKings(roomCode, result.playerName, result.hand);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
                     break;
                 case "u4K":
@@ -363,6 +363,27 @@ namespace SixJuice
         public void resQ(string roomCode, int count, Card queen, string queenPlayer, List<string> nonOkd)
         {
             Clients.Group(roomCode).resQ(count, queen, queenPlayer, nonOkd);
+        }
+
+        //From Game: Registers a player as being done and passes to the next player. Also detects end of game
+        public async Task imDone(string roomCode, string playerNom)
+        {
+            if(await _db.PlayerDone(roomCode, playerNom))
+            {
+                //Everyone's done, game over
+                Clients.Group(roomCode).gameOver();
+            } else
+            {
+                //Same as End Turn (a blank Discard event)
+                await GameAction(roomCode, JsonConvert.SerializeObject(new GameAction
+                {
+                    action = "discard",
+                    hand = null,
+                    table = null,
+                    misc = null,
+                    playerName = playerNom
+                }));
+            }
         }
 
         //Helper for cloning game actions. Note: shallow cloning - card lists point to same lists
