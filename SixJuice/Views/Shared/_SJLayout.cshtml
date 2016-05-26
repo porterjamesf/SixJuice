@@ -75,7 +75,6 @@
             });
 
             window.addEventListener('popstate', function (e) {
-                console.log(e.state);
                 if (e.state != null && e.state.screen == "menu") {
                     if (closingMenu) { //Closing whole menu; will continue to go back through history until the state
                         window.history.back(); // popped is not a menu state, thus clearing the menu history stack

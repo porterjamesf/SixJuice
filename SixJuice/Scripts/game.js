@@ -53,7 +53,6 @@
         history.pushState({ scrn: "Game", rc: roomCode, sub: null }, "Game " + roomCode, window.location);
     }
     firePopstate = function (e) {
-        console.log("popstate " + e.state);
         if (e.state == null || e.state.sub == null) {
             hideKingOverlay();
         }
@@ -307,6 +306,7 @@
         $('.normalCardPile').css("left", xcursor);
         xcursor += deckwidths[size] + standardmargins[size]; //After 1 more deck
         $('.hand').css("left", xcursor);
+        setPosition('.playerLabel', xcursor + 2 * standardmargins[size], cardheights[size] / 2);
         //Calculating hand width (Total width minus 2 decks & 1/2 a card for the first king)
         calcedHandWidth = Math.max(handmins[size], Math.min(handmaxs[size], width - xcursor - standardmargins[size] - 0.5 * cardwidths[size]));
         $('.hand').css("width", calcedHandWidth);
@@ -722,7 +722,6 @@
             if (event.type == "mouseup" && !this.dragged && this.isActive) {
                 clickx = relX(event, e(this.offsetElement == null ? this.id : this.offsetElement));
                 clicky = relY(event, e(getCardBarContainerId(this.id)), this.offsetElement == null ? 0 : e(this.offsetElement).position().top);
-                //console.log("click (" + clickx + ", " + clicky + ")");
                 for (var i = this.cardList.length - 1; i >= 0; i--) {
                     cardx = e(this.cardList[i]).position().left;
                     if (clickx >= cardx && clickx < cardx + cardwidths[size]) {
@@ -1002,6 +1001,7 @@
                 e(opName).append('<span id="' + opName + 'PointCardPile" class="deck"></span>');
                 e(opName).append('<span id="' + opName + 'NormalCardPile" class="deck normalCardPile"></span>');
                 e(opName).append('<span id="' + opName + 'Hand" class="cardBar hand"></span>');
+                e(opName).append('<span id="' + opName + 'Label" class="playerLabel medText">' + opName + '</span>');
                 e(opName).append('<span id="' + opName + 'Kings" class="kings"></span>');
                 op = new OtherPlayer(
                     opName,
@@ -1222,6 +1222,10 @@
                 }
             }
         }, 1000);
+        //If hand has no cards, send OK automatically
+        if (hand.cardList.length == 0) {
+            clickOKQ();
+        }
     }
     // Method(s) for updating queen OK list, for the queen player only. Removes ok'd name from list. When list is empty,
     // triggers call to complete queen play.
@@ -1238,6 +1242,12 @@
             });
             hub.server.gameAction(roomCode, JSON.stringify(new GameAction("endQ", [playedQueen], tableCards, null)));
         }
+    }
+    // Action for clicking the OK button in a queen count down, from a non-queen-playing player
+    clickOKQ = function () {
+        queenOK = true;
+        $('#nojack').hide();
+        hub.server.okQueen(roomCode, playerName);
     }
 
     hub.client.receivePlayerGameAction = function(pgadata) {
@@ -1331,7 +1341,11 @@
                     } else {
                         for (var i = 0; i < otherPlayers.length; i++) {
                             if (otherPlayers[i].name == pga.misc) {
-                                updateAskedFor(pga.misc);
+                                //If this player is using another's cards for kings, the
+                                // askedfor array is updated
+                                if (pga.playerName == playerName) {
+                                    updateAskedFor(pga.misc);
+                                }
                                 pga.hand.forEach(function (cardobj, index) {
                                     otherPlayers[i].hand.popCard();
                                 });
@@ -1728,7 +1742,6 @@
     }
 
     hub.client.nothingFrom = function (otherPlayerName) {
-        console.log("Nothing from " + otherPlayerName);
         updateAskedFor(otherPlayerName);
     }
     updateAskedFor = function(otherPlayerName) {
@@ -1742,14 +1755,13 @@
             kPlayer.getSelected(true).forEach(function (cardId, index) {
                 if (askedfor[ind].indexOf(getCardNumber(cardId)) == -1) {
                     askedfor[ind].push(getCardNumber(cardId));
+                    console.log("Adding " + getCardNumber(cardId) + " to askedfor for " + otherPlayers[ind].name);
                 }
             });
             updateAskEnablement();
         }
     }
     updateAskEnablement = function () {
-        console.log("Update ask enablement:");
-        console.log(askedfor);
         var everyone = (otherPlayers.length > 1 ? true : null);
         otherPlayers.forEach(function (oPlayer, ind) {
             //Reevaluate grey state
@@ -1819,10 +1831,10 @@
 
     checkForDone = function () {
         if (e('Kings').text() == "Kings (done)" && drawpile.cardList.length == 0 && hand.cardList.length == 0) {
-            console.log("This player is done");
+            //console.log("This player is done");
             return true;
         } else {
-            console.log("Not done yet");
+            //console.log("Not done yet");
             return false;
         }
     }
@@ -1876,7 +1888,21 @@
                     update = JSON.stringify(new GameAction("useK", kingsToPlay, null, null));
                     break;
                 case 12:
-                    update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
+                    var noCards = true;
+                    otherPlayers.forEach(function (oPlayer, index) {
+                        if (oPlayer.hand.cardList.length > 0) {
+                            noCards = false;
+                        }
+                    });
+                    if (noCards) { //No one else has any cards, so no need for the count down
+                        tableCards = [];
+                        table.cardList.forEach(function (cardID, index) {
+                            tableCards.push(new CardObj(cardID));
+                        });
+                        update = JSON.stringify(new GameAction("endQ", [usedCard], tableCards, null));
+                    } else { //Someone could have the JOS, so countdown is started
+                        update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
+                    }
                     break;
                 case 11:
                     //The logic for showing the Use action in the first place takes care of checking that this is the jack of spades
@@ -1920,9 +1946,7 @@
             }
         });
         $('#OK').on('click', function () {
-            queenOK = true;
-            $('#nojack').hide();
-            hub.server.okQueen(roomCode, playerName);
+            clickOKQ();
         });
         $('#HoldJack').on('click', function () {
             queenOK = true;
@@ -2044,13 +2068,9 @@
         $('.kingOverlay').on('click', function () {
             kOuterClick = true;
             setTimeout(kingOverlayOuterClick, 5);
-            console.log("ko click");
         });
         $('#kingContent').on('click', function () {
             setTimeout(kingOverlayInnerClick, 3);
-        });
-        $('.gameBoard').on('click', function () {
-            console.log("gameboard click");
         });
     });
 });

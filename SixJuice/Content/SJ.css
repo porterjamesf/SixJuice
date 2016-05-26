@@ -237,6 +237,10 @@
     color: #aa0000;
 }
 
+.playerLabel {
+    position: absolute;
+}
+
 .rejoinButton {
     height: 2em;
     margin-top: 7px;
