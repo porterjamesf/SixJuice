@@ -64,7 +64,8 @@ namespace SixJuice.Database
                 Deck = new List<Card>(),
                 Players = new List<Player>(),
                 Turn = -1,
-                DeckCount = 1
+                DeckCount = 1,
+                Results = null
             };
             await games.InsertOneAsync(gameToAdd);
 
@@ -130,14 +131,14 @@ namespace SixJuice.Database
             await games.UpdateOneAsync(filter, update);
         }
 
-        public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode)
+        public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode, string playerName)
         {
             return (await GetGame(roomCode)).Players.Select(p =>
             {
                 return new PlayerViewModel
                 {
                     playerName = p.Name,
-                    ready = p.Ready
+                    ready = p.Name.Equals(playerName) ? p.Ready : p.Done || p.Ready
                 };
             }).ToList();
         }
@@ -156,7 +157,7 @@ namespace SixJuice.Database
             var filter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
             var update = Builders<Game>.Update.Set("Players.$.Ready", isReady);
             await games.UpdateOneAsync(filter, update);
-            return await GetPlayerList(roomCode);
+            return await GetPlayerList(roomCode, playerName);
         }
 
         #region Game Play
@@ -572,14 +573,89 @@ namespace SixJuice.Database
             return result;
         }
 
-        public async Task<bool> PlayerDone(string roomCode, string playerName)
+        public async Task<Results> PlayerDone(string roomCode, string playerName)
         {
             var builder = Builders<Game>.Filter;
             var filterThisPlayer = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
             var update = Builders<Game>.Update.Set("Players.$.Done", true);
             await games.UpdateOneAsync(filterThisPlayer, update);
-            //Returns true when all players are done
-            return (await GetGame(roomCode)).Players.Where(p => !p.Done).Count() == 0;
+            Game game = await GetGame(roomCode);
+            if(game.Players.Where(p => !p.Done).Count() == 0)
+            { // Game over
+                //Write names and tally normal cards, and note who has the most
+                List<string> names = new List<string>();
+                List<int> normalCards = new List<int>();
+                List<int> playersWithMostNCs = new List<int>();
+                int maxNCs = 0;
+                for (int i = 0; i < game.Players.Count; i++)
+                {
+                    names.Add(game.Players[i].Name);
+                    int count = game.Players[i].NormalCards.Count;
+                    normalCards.Add(count);
+                    if (count == maxNCs)
+                    {
+                        playersWithMostNCs.Add(i);
+                    }
+                    if (count > maxNCs)
+                    {
+                        playersWithMostNCs = new List<int>();
+                        playersWithMostNCs.Add(i);
+                        maxNCs = count;
+                    }
+                }
+                //Add normal card bonuses
+                List<int> normalCardBonuses = new List<int>();
+                bool justOne = playersWithMostNCs.Count == 1;
+                for (int i = 0; i < game.Players.Count; i++)
+                {
+                    if(normalCards[i] == maxNCs)
+                    {
+                        normalCardBonuses.Add(justOne ? 2 : 1);
+                    } else
+                    {
+                        normalCardBonuses.Add(0);
+                    }
+                }
+                //Tally points
+                List<int> pointCards = new List<int>();
+                for (int i = 0; i < game.Players.Count; i++)
+                {
+                    pointCards.Add(game.Players[i].PointCards.Count);
+                }
+                //Tally scores, and note who has the most
+                List<int> scores = new List<int>();
+                List<string> winners = new List<string>();
+                int maxPts = 0;
+                for (int i = 0; i < game.Players.Count; i++)
+                {
+                    int score = pointCards[i] + normalCardBonuses[i];
+                    scores.Add(score);
+                    if (score == maxPts)
+                    {
+                        winners.Add(names[i]);
+                    }
+                    if (score > maxPts)
+                    {
+                        winners = new List<string>();
+                        winners.Add(names[i]);
+                        maxPts = score;
+                    }
+                }
+                //Save and return results
+                var results = new Results
+                {
+                    PlayerNames = names,
+                    NormalCardCounts = normalCards,
+                    NormalCardBonuses = normalCardBonuses,
+                    PointCardCounts = pointCards,
+                    Scores = scores,
+                    Winners = winners
+                };
+                var resultsUpdate = Builders<Game>.Update.Set("Results", results);
+                await games.UpdateOneAsync(getFilter(roomCode), resultsUpdate);
+                return results;
+            }
+            return null;
         }
 
         #endregion

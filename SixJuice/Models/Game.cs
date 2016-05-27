@@ -17,5 +17,6 @@ namespace SixJuice.Models
         public List<Card> Deck { get; set; }
         public List<Card> Table { get; set; }
         public List<Player> Players { get; set; }
+        public Results Results { get; set; }
     }
 }

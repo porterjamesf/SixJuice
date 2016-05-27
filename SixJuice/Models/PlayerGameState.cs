@@ -11,6 +11,7 @@ namespace SixJuice.Models
         public int DeckCount { get; set; }
         public List<Card> Table { get; set; }
         public string WhosTurn { get; set; }
+        public Results GameOver { get; set; }
         //This player
         public List<Card> Hand { get; set; }
         public List<List<Card>> Kings { get; set; }

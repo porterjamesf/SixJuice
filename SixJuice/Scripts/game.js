@@ -202,6 +202,20 @@
         return $('#' + id);
     }
 
+    //Formats a list of strings into a single string list with appropriate commas & 'and'
+    formatList = function (strings) {
+        if (strings.length == 1) {
+            return strings[0] + " won.";
+        } else {
+            var lastTwo = strings.slice(-2);
+            var output = lastTwo[0] + " and " + lastTwo[1] + " tied.";
+            for (var i = 0; i < strings.length - 2; i++) {
+                output = strings[i] + ", " + output;
+            }
+            return output;
+        }
+    }
+
     //------------------------------------------
     //      GAME ENGINE
     //------------------------------------------
@@ -275,7 +289,24 @@
         oHeight = hei * 0.8;
         setSize('.overlay', wid - 1, hei - 1);
         setSize('.overlay .overlayContent', oWidth, oHeight);
-        setPosition('.overlay .overlayContent', (wid-oWidth)/2, (hei-oHeight)/2);
+        setPosition('.overlay .overlayContent', (wid - oWidth) / 2, (hei - oHeight) / 2);
+        //Game over readout
+        setSize('.gameOver', width, height / 6);
+        $('.gameOver').css("top", height / 3);
+        setSize('.winner', width, height / 2);
+        $('.winner').css("top", height / 2);
+        $('.goReadout, .goReadout span, .goReadoutData').css("width", width / 5);
+        //$('.goReadout span').css("width", width / 5);
+        $('.goCol1H, .goCol1').css("left", width / 10);
+        $('.goCol2H, .goCol2').css("left", 3*width / 10);
+        $('.goCol3H, .goCol3').css("left", 5*width / 10);
+        $('.goCol4H, .goCol4').css("left", 7 * width / 10);
+        var goLabelHeight = e('goNrml').height();
+        var goRowHeight = $('#goName span').height();
+        e('goName').css("height", goLabelHeight);
+        e('goPnts').css("height", goLabelHeight);
+        e('goScre').css("height", goLabelHeight);
+
         setSize('.gameboard', width, height);
         $('.gameboard').css("padding", pagemargins[size]);
         //Find sizing index
@@ -290,6 +321,8 @@
         $('.smallText').css("font-size", smallTextSizes[size] + "em");
         $('.medText').css("font-size", medTextSizes[size] + "em");
         $('.bigText').css("font-size", bigTextSizes[size] + "em");
+        $('.goRowH').css("height", goLabelHeight + standardmargins[size]);
+        $('.goRow').css("height", goRowHeight + standardmargins[size]);
         //Set element sizes
         setSize('.card', cardwidths[size], cardheights[size]);
         setSize('.emptyCard', cardwidths[size], cardheights[size]);
@@ -303,7 +336,7 @@
         //Set element positions
         var xcursor = rowmargins[size] + deckwidths[size] + standardmargins[size]; //After 1 deck
         e('table').css("left", xcursor);
-        $('.normalCardPile').css("left", xcursor);
+        $('.pointCardPile').css("left", xcursor);
         xcursor += deckwidths[size] + standardmargins[size]; //After 1 more deck
         $('.hand').css("left", xcursor);
         setPosition('.playerLabel', xcursor + 2 * standardmargins[size], cardheights[size] / 2);
@@ -411,8 +444,25 @@
         }
     }
 
-    hub.client.gameOver = function () {
-        console.log("Game Over");
+    hub.client.gameOver = function (gameResultsJson) {
+        showGameOver(JSON.parse(gameResultsJson));
+    }
+    showGameOver = function (gameResults) {
+        clearActions();
+        //Generate lines in game over readout
+        console.log(gameResults);
+        for (var i = 0; i < gameResults.PlayerNames.length; i++) {
+            $('.winner').append('<div id="' + gameResults.PlayerNames[i] + 'readout" class="goRow">' +
+                '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[i] + '</span>' +
+                '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[i] + '</span>' +
+                '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[i] + '</span>' +
+                '<span class="smallText goReadoutData goCol4">' + gameResults.Scores[i] + '</span>' +
+                '</div>');
+        }
+        $('.playerLabel').hide();
+        $('.gameOver').show();
+        $('.winnerHeadline').text(formatList(gameResults.Winners));
+        $('.winner').show();
     }
 
     //---------CLASSES------------
@@ -421,13 +471,12 @@
     function Deck(id) {
         this.id = id;
         this.cardList = [];
-        e(this.id).append(getCardHole());
 
         this.pushCard = function (cardId) {
             if (this.cardList.length > 0) {
                 removeCardGraphic(this.cardList[this.cardList.length - 1]);
             } else {
-                e(this.id).empty();
+                this._clear();
             }
             var idToUse = (cardId == null ? "deckfill" + this.id + this.cardList.length : cardId);
             e(this.id).append(getCardDiv(idToUse));
@@ -463,7 +512,7 @@
             if (oldLength > 0) {
                 removeCardGraphic(this.cardList[oldLength - 1]);
             } else {
-                e(this.id).empty();
+                this._clear();
             }
             for (var i = 0; i < count - 1; i++) {
                 var idToUse = "deckfill" + this.id + oldLength + i;
@@ -475,8 +524,6 @@
                 e(this.id).append(getCardDiv(idToUse));
                 addCardGraphic(idToUse, topCardId != null);
                 this.cardList.push(idToUse);
-            } else {
-                e(this.id).append(getCardHole());
             }
         }
 
@@ -487,6 +534,7 @@
         this._clear = function () {
             this.cardList = [];
             e(this.id).empty();
+            e(this.id).append('<div id="' + this.id + 'count" class="deckCount xsmlText"></div>');
             e(this.id).append(getCardHole());
         }
 
@@ -499,9 +547,19 @@
         this.redraw = function () {
             if (this.cardList.length > 0) {
                 for (var i = 0; i < this.cardList.length; i++) {
-                    e(this.cardList[i]).css("left", Math.max(deckmargins[size] - i, 0));
-                    e(this.cardList[i]).css("top", Math.max(deckmargins[size] - i, 0));
+                    setPosition('#' + this.cardList[i], Math.max(deckmargins[size] * (1 - i / deckCount), 0), Math.max(deckmargins[size] * (1 - i / deckCount), 0));
                 }
+            }
+            setPosition('#' + this.id + "count", deckmargins[size], deckheights[size]);
+            $('#' + this.id + 'count').css("width", cardwidths[size]);
+            this.updateCount();
+        }
+
+        this.updateCount = function () {
+            if (this.cardList.length > 0) {
+                $('#' + this.id + 'count').text(this.cardList.length);
+            } else {
+                $('#' + this.id + 'count').text("");
             }
         }
 
@@ -509,6 +567,9 @@
             //Click on deck -- for jack of spades
             // May be replaced with overlay
         }).bind(this));
+
+        //Final clear after obejct loaded
+        this._clear();
     }
 
     //Class for the table, hands, and card lists in King overlay
@@ -907,6 +968,7 @@
     drawpile = new Deck("drawpile");
     table = new CardBar("table", true);
     whosTurn = "";
+    deckCount = 1;
     //Player variables
     pointCardPile = new Deck("pointCardPile");
     normalCardPile = new Deck("normalCardPile");
@@ -949,6 +1011,8 @@
     //Complete update of the board from the database
     hub.client.receivePlayerGameState = function (pgsdata) {
         pgs = JSON.parse(pgsdata);
+
+        deckCount = pgs.DeckCount;
 
         //Drawpile
         drawpile.clearAndImport(pgs.DeckCount, null);
@@ -998,8 +1062,8 @@
             //Find/create other player
             if ($('#' + opName).length == 0) {
                 e('players').append('<div id="' + opName + '" class="boardrow"></div>');
-                e(opName).append('<span id="' + opName + 'PointCardPile" class="deck"></span>');
-                e(opName).append('<span id="' + opName + 'NormalCardPile" class="deck normalCardPile"></span>');
+                e(opName).append('<span id="' + opName + 'NormalCardPile" class="deck"></span>');
+                e(opName).append('<span id="' + opName + 'PointCardPile" class="deck pointCardPile"></span>');
                 e(opName).append('<span id="' + opName + 'Hand" class="cardBar hand"></span>');
                 e(opName).append('<span id="' + opName + 'Label" class="playerLabel medText">' + opName + '</span>');
                 e(opName).append('<span id="' + opName + 'Kings" class="kings"></span>');
@@ -1050,6 +1114,10 @@
         }
 
         resize(window.innerWidth, window.innerHeight);
+
+        if (pgs.GameOver != null) {
+            showGameOver(pgs.GameOver);
+        }
     }
 
     updateKingsOverlay = function () {
@@ -1830,13 +1898,7 @@
     }
 
     checkForDone = function () {
-        if (e('Kings').text() == "Kings (done)" && drawpile.cardList.length == 0 && hand.cardList.length == 0) {
-            //console.log("This player is done");
-            return true;
-        } else {
-            //console.log("Not done yet");
-            return false;
-        }
+        return e('Kings').text() == "Kings (done)" && drawpile.cardList.length == 0 && hand.cardList.length == 0;
     }
 
     //Methods for registering a click outside the king overlay. A click on any part of the overlay (inside or outside)

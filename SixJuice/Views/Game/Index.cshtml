@@ -42,7 +42,18 @@
         </div>
     </div>
 </div>
-<div class="notYourTurn overlay"></div>
+<div class="notYourTurn overlay">
+    <div id="MrFlibbleSays" class="gameOver bigText" style="display:none">Game Over</div>
+    <div class="winner" style="display:none">
+        <div class="winnerHeadline medText">PlayerX wins</div>
+        <div class="goRowH">
+            <span class="smallText goReadout goCol1H" id="goName"><span style="font-style:oblique">Name</span></span>
+            <span class="smallText goReadout goCol2H" id="goNrml" style="font-style:oblique; text-align:center">Normal Cards</span>
+            <span class="smallText goReadout goCol3H" id="goPnts"><span style="font-style:oblique">Point Cards</span></span>
+            <span class="smallText goReadout goCol4H" id="goScre"><span style="font-style:oblique">Score</span></span>
+        </div>
+    </div>
+</div>
 <div id="wait" class="waitOverlay overlay">
     <span class="overlayContent">
         <span class="medText spiv">Waiting for players:</span>
@@ -68,8 +79,8 @@
     </div>
     <div id="players">
         <div id="ThisPlayer" class="boardrow">
-            <span id="pointCardPile" class="deck"></span>
-            <span id="normalCardPile" class="deck normalCardPile"></span>
+            <span id="normalCardPile" class="deck"></span>
+            <span id="pointCardPile" class="deck pointCardPile"></span>
             <span id="hand" class="cardBar hand"></span>
             <span id="ThisPlayerKings" class="kings">
 

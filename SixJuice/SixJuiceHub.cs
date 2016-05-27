@@ -77,7 +77,7 @@ namespace SixJuice
                 await _db.AddConnectedPlayer(Context.ConnectionId, playerName, roomCode, "Room");
 
                 await Groups.Add(Context.ConnectionId, roomCode);
-                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
+                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, playerName)));
             } catch (MongoDBHelper.NoSuchGameException)
             {
                 Clients.Caller.cancelJoinRoom();
@@ -88,13 +88,13 @@ namespace SixJuice
         public async Task ChangeName(string roomCode, string newName)
         {
             //Validation
-            var fail = (await _db.GetPlayerList(roomCode)).Select(p => p.playerName).ToList().Contains(newName);
+            var fail = (await _db.GetPlayerList(roomCode, newName)).Select(p => p.playerName).ToList().Contains(newName);
             Clients.Caller.nameChangeCallback(newName, fail);
             if(!fail)
             {
                 //Name change
                 await _db.ChangePlayerName(Context.ConnectionId, newName);
-                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
+                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, newName)));
             }
         }
 
@@ -180,7 +180,7 @@ namespace SixJuice
         public async Task Rejoin(string roomCode)
         {
             await Groups.Add(Context.ConnectionId, roomCode);
-            Clients.Caller.playersReady(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
+            Clients.Caller.playersReady(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, "")));
         }
 
         //From Rejoin - Adds a connected player for the newly joining connection
@@ -193,7 +193,7 @@ namespace SixJuice
         // (this is what guards against url tinkering to break the site)
         public async Task ConfirmId(string roomCode, string playerName)
         {
-            var player = (await _db.GetPlayerList(roomCode)).Where(p => p.playerName.Equals(playerName));
+            var player = (await _db.GetPlayerList(roomCode, playerName)).Where(p => p.playerName.Equals(playerName));
             bool result = false;
             if(player.Count() == 1)
             {
@@ -224,6 +224,7 @@ namespace SixJuice
                 DeckCount = game.Deck.Count,
                 Table = game.Table,
                 WhosTurn = game.Players[game.Turn].Name,
+                GameOver = game.Results,
                 Hand = thisPlayer.Hand,
                 Kings = thisPlayer.Kings,
                 KSources = thisPlayer.KSources,
@@ -368,11 +369,8 @@ namespace SixJuice
         //From Game: Registers a player as being done and passes to the next player. Also detects end of game
         public async Task imDone(string roomCode, string playerNom)
         {
-            if(await _db.PlayerDone(roomCode, playerNom))
-            {
-                //Everyone's done, game over
-                Clients.Group(roomCode).gameOver();
-            } else
+            Results result = await _db.PlayerDone(roomCode, playerNom);
+            if (result == null)
             {
                 //Same as End Turn (a blank Discard event)
                 await GameAction(roomCode, JsonConvert.SerializeObject(new GameAction
@@ -383,6 +381,9 @@ namespace SixJuice
                     misc = null,
                     playerName = playerNom
                 }));
+            } else
+            {
+                Clients.Group(roomCode).gameOver(JsonConvert.SerializeObject(result));
             }
         }
 
@@ -413,7 +414,7 @@ namespace SixJuice
                 {
                     await _db.RemoveConnectedPlayer(Context.ConnectionId);
                     await _db.RemovePlayer(player.RoomCode, player.PlayerName);
-                    Clients.Group(player.RoomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(player.RoomCode)));
+                    Clients.Group(player.RoomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(player.RoomCode, player.PlayerName)));
 
                     //Deletion of empty game
                     await _db.RemoveEmptyGame(player.RoomCode);

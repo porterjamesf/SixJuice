@@ -20,7 +20,7 @@
     position: absolute;
     z-index: 125;
     pointer-events: none;
-    background-color: rgba(10, 0, 10, 0.09);
+    background-color: rgba(150, 140, 150, 0.4);
 }
 
 .waitOverlay {
@@ -239,6 +239,39 @@
 
 .playerLabel {
     position: absolute;
+}
+
+.gameOver {
+    position: absolute;
+    text-align: center;
+}
+
+.winner {
+    position: absolute;
+    /*text-align: center;*/
+}
+.winner div {
+    text-align: center;
+}
+
+.goReadout {
+    position: absolute;
+    text-align: left;
+}
+.goReadout span {
+    position: absolute;
+    bottom: 0px;
+    text-align: center;
+}
+
+.goReadoutData {
+    position: absolute;
+    text-align: center;
+}
+
+.deckCount {
+    position: absolute;
+    text-align:center;
 }
 
 .rejoinButton {
