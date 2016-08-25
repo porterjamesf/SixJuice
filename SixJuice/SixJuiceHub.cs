@@ -219,9 +219,10 @@ namespace SixJuice
             Game game = await _db.GetGame(roomCode);
             Player thisPlayer = game.Players.Where(p => p.Name.Equals(playerName)).Single();
             List<Player> otherPlayers = game.Players.Where(p => !p.Name.Equals(playerName)).ToList();
-            PlayerGameState pgs = new PlayerGameState
-            {
-                DeckCount = game.Deck.Count,
+			PlayerGameState pgs = new PlayerGameState
+			{
+				DeckCount = game.Deck.Count,
+				NumberOfDecks = game.DeckCount,
                 Table = game.Table,
                 WhosTurn = game.Players[game.Turn].Name,
                 GameOver = game.Results,

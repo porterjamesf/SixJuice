@@ -247,5 +247,7 @@
         $('#rejoinPlayerList').on('click', '.rejoinButton', function () {
             window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', $(this).text());
         });
+
+        $(".SJBody").show();
     });
 });

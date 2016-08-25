@@ -279,6 +279,8 @@
     oWidth = 0; //Dimensions of overlay content frame
     oHeight = 0;
     size = 0; //Index into sizing arrays, calculated on window sizing events using breakpoints
+    firstSizeEvent = true; //Used to tell when a sizing event is the first one, triggering showing the page afterward
+    gameOverNotShown = true;
 
     //-----SIZING EVENT-----------
     resize = function (wid, hei) {
@@ -290,6 +292,10 @@
         setSize('.overlay', wid - 1, hei - 1);
         setSize('.overlay .overlayContent', oWidth, oHeight);
         setPosition('.overlay .overlayContent', (wid - oWidth) / 2, (hei - oHeight) / 2);
+        //Quenn/JOC buttons
+        $('.queenButtons').css("width", oWidth);
+        $('.queenButton').css("width", oWidth * 0.7);
+        $('.qbSidePad').css("width", oWidth * 0.13);
         //Game over readout
         setSize('.gameOver', width, height / 6);
         $('.gameOver').css("top", height / 3);
@@ -374,6 +380,12 @@
         if ($('#kPlayerMenu').css("display") != "none") {
             $('#kPlayerMenu').css("top", (deckheights[size] - buttonheights[size]) / 2 - $('#kPlayerMenu').height() - 10);
         }
+
+        //Show page after first resize
+        if (firstSizeEvent) {
+            $(".SJBody").show();
+            firstSizeEvent = false;
+        }
     }
     calculateKingAndPlayerWidths = function () {
         $('.king').css("top", deckmargins[size] + rowmargins[size]);
@@ -445,24 +457,30 @@
     }
 
     hub.client.gameOver = function (gameResultsJson) {
+        console.log("hc go");
         showGameOver(JSON.parse(gameResultsJson));
     }
     showGameOver = function (gameResults) {
-        clearActions();
-        //Generate lines in game over readout
-        console.log(gameResults);
-        for (var i = 0; i < gameResults.PlayerNames.length; i++) {
-            $('.winner').append('<div id="' + gameResults.PlayerNames[i] + 'readout" class="goRow">' +
-                '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[i] + '</span>' +
-                '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[i] + '</span>' +
-                '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[i] + '</span>' +
-                '<span class="smallText goReadoutData goCol4">' + gameResults.Scores[i] + '</span>' +
-                '</div>');
+        if (gameOverNotShown) {
+            clearActions();
+            //Generate lines in game over readout
+            console.log(gameResults);
+            for (var i = 0; i < gameResults.PlayerNames.length; i++) {
+                $('.winner').append('<div id="' + gameResults.PlayerNames[i] + 'readout" class="goRow">' +
+                    '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[i] + '</span>' +
+                    '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[i] + '</span>' +
+                    '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[i] + '</span>' +
+                    '<span class="smallText goReadoutData goCol4">' + gameResults.Scores[i] + '</span>' +
+                    '</div>');
+            }
+            $('.playerLabel').hide();
+            $('.gameOver').show();
+            $('.winnerHeadline').text(formatList(gameResults.Winners));
+            $('.winner').show();
+            resize(window.innerWidth, window.innerHeight);
+
+            gameOverNotShown = false;
         }
-        $('.playerLabel').hide();
-        $('.gameOver').show();
-        $('.winnerHeadline').text(formatList(gameResults.Winners));
-        $('.winner').show();
     }
 
     //---------CLASSES------------
@@ -547,7 +565,7 @@
         this.redraw = function () {
             if (this.cardList.length > 0) {
                 for (var i = 0; i < this.cardList.length; i++) {
-                    setPosition('#' + this.cardList[i], Math.max(deckmargins[size] * (1 - i / deckCount), 0), Math.max(deckmargins[size] * (1 - i / deckCount), 0));
+                    setPosition('#' + this.cardList[i], Math.max(deckmargins[size] * (1 - i / (52 * numberOfDecks)), 0), Math.max(deckmargins[size] * (1 - i / (52 * numberOfDecks)), 0));
                 }
             }
             setPosition('#' + this.id + "count", deckmargins[size], deckheights[size]);
@@ -968,7 +986,8 @@
     drawpile = new Deck("drawpile");
     table = new CardBar("table", true);
     whosTurn = "";
-    deckCount = 1;
+    deckCount = 52;
+    numberOfDecks = 1;
     //Player variables
     pointCardPile = new Deck("pointCardPile");
     normalCardPile = new Deck("normalCardPile");
@@ -1013,6 +1032,7 @@
         pgs = JSON.parse(pgsdata);
 
         deckCount = pgs.DeckCount;
+        numberOfDecks = pgs.NumberOfDecks;
 
         //Drawpile
         drawpile.clearAndImport(pgs.DeckCount, null);
@@ -1116,6 +1136,7 @@
         resize(window.innerWidth, window.innerHeight);
 
         if (pgs.GameOver != null) {
+            console.log("rpgs go");
             showGameOver(pgs.GameOver);
         }
     }
@@ -1256,7 +1277,7 @@
         } else {
             queenOK = isOKd;
             playerOKs = [playerName];
-            $('#sweeper').text(queenPlayer + "is playing a Queen.");
+            $('#sweeper').text(queenPlayer + " is playing a Queen.");
             if (!queenOK) {
                 var hasJack = false;
                 hand.cardList.forEach(function (cardId, index) {
@@ -1289,7 +1310,7 @@
                     queenCount -= 1;
                 }
             }
-        }, 1000);
+        }, 1000000);
         //If hand has no cards, send OK automatically
         if (hand.cardList.length == 0) {
             clickOKQ();
