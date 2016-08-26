@@ -202,7 +202,7 @@
         return $('#' + id);
     }
 
-    //Formats a list of strings into a single string list with appropriate commas & 'and'
+    //Formats a list of winning player names into a single string describing the winner(s)
     formatList = function (strings) {
         if (strings.length == 1) {
             return strings[0] + " won.";
@@ -280,10 +280,13 @@
     oHeight = 0;
     size = 0; //Index into sizing arrays, calculated on window sizing events using breakpoints
     firstSizeEvent = true; //Used to tell when a sizing event is the first one, triggering showing the page afterward
-    gameOverNotShown = true;
+    gameOverNotShown = true; //Used to tell when the game over listings have already happened, so they aren't appended again with a new player game state event
 
     //-----SIZING EVENT-----------
     resize = function (wid, hei) {
+
+        //---WINDOWS, SCREENS AND BUTTONS
+
         //Set size of window
         width = wid - 2 * pagemargins[size] - 1;
         height = hei - 2 * pagemargins[size] - 1;
@@ -315,13 +318,17 @@
 
         setSize('.gameboard', width, height);
         $('.gameboard').css("padding", pagemargins[size]);
-        //Find sizing index
+
+        //---SIZING INDEX
         for (var i = 0; i < cardwidths.length; i++) {
             if (width < widthbreakpoints[i] || height < heightbreakpoints[i]) {
                 break;
             }
             size = i;
         }
+
+        //---SIZE-INDEX-DEPENDENT GAME ELEMENTS
+
         //Set text size
         $('.xsmlText').css("font-size", xsmlTextSizes[size] + "em");
         $('.smallText').css("font-size", smallTextSizes[size] + "em");
@@ -366,12 +373,17 @@
         });
 
         //Action buttons - at end so that we can grab scrollwidth after all the gameboard elements have their positions set
-        setSize('.actionButtons', width, buttonheights[size] + 2 * standardmargins[size]);
+        var abuttonHeight = buttonheights[size] + 2 * standardmargins[size];
+        setSize('.actionButtons', width, abuttonHeight);
         $('.actionButtons').css("left", pagemargins[size]);
-        $('#buttonSpace').css("height", buttonheights[size] + 2 * standardmargins[size]);
+        $('#buttonSpace').css("height", abuttonHeight);
         calculateButtonWidth();
         $('.actionButton').css("height", buttonheights[size]);
         $('.actionButton').css("margin", standardmargins[size] + "px");
+        //Text readout
+        setSize('.textReadout', width - 2 * pagemargins[size], abuttonHeight);
+        $('.textReadout').css("bottom", abuttonHeight);
+        $('.textReadout').css("left", pagemargins[size]);
 
         //Player menu positions
         if (e('josPlayerMenu').css("display") != "none") {
@@ -447,11 +459,11 @@
                 hub.server.imDone(roomCode, playerName);
             } else {
                 $('.notYourTurn').hide();
-                $('.actionButtonOverlay').show();
+                $('.actionButtons').show();
             }
         } else {
             $('.notYourTurn').show();
-            $('.actionButtonOverlay').hide();
+            $('.actionButtons').hide();
             $('.cardSelected').removeClass('cardSelected');
         }
     }
@@ -1922,6 +1934,16 @@
         return e('Kings').text() == "Kings (done)" && drawpile.cardList.length == 0 && hand.cardList.length == 0;
     }
 
+    showText = function (text) {
+        var readoutArray = e('textReadoutContents').html().split('<br>');
+        readoutArray = readoutArray.concat(text).slice(Math.max(readoutArray.length - 3, 0));
+        e('textReadoutContents').html(readoutArray.join('<br>'));
+    }
+
+    hub.client.showText = function (text) {
+        showText(text);
+    }
+
     //Methods for registering a click outside the king overlay. A click on any part of the overlay (inside or outside)
     // triggers one click event, and a click on only the inner part triggers the other. If the first happens but not
     // the second, then it's a click outside.
@@ -1943,7 +1965,7 @@
         $(window).resize(function () {
             resize(window.innerWidth, window.innerHeight);
         })
-
+        
         //--------ACTIONS----------
         $('#Take').on('click', function () {
             clearActions();

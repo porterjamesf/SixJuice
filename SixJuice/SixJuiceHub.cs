@@ -253,24 +253,82 @@ namespace SixJuice
                 });
             }
             Clients.Caller.receivePlayerGameState(JsonConvert.SerializeObject(pgs));
+			Clients.Group(roomCode).showText(playerName + " has rejoined the game.");
         }
+
+		// Converts a list of cards to a string e.g. 4H, JS and KD
+		private string formatCardNames(List<Card> cards, bool onlyNumbers = false)
+		{
+			if(cards.Count == 0)
+			{
+				return "";
+			}
+			string result = formatOneCardName(cards.ElementAt(cards.Count - 1), onlyNumbers);
+			for(int i = cards.Count - 2; i >= 0; i--)
+			{
+				result = formatOneCardName(cards.ElementAt(i), onlyNumbers) + (i == cards.Count - 2 ? " and " : ", ") + result;
+			}
+			return result;
+		}
+		private string formatOneCardName(Card card, bool onlyNumbers)
+		{
+			string result = "";
+			switch(card.number)
+			{
+				case 13:
+					result = "K";
+					break;
+				case 12:
+					result = "Q";
+					break;
+				case 11:
+					result = "J";
+					break;
+				case 1:
+					result = "A";
+					break;
+				default:
+					result = card.number.ToString();
+					break;
+			}
+			if (!onlyNumbers)
+			{
+				switch (card.suit)
+				{
+					case "hearts":
+						result += "H";
+						break;
+					case "diamonds":
+						result += "D";
+						break;
+					case "clubs":
+						result += "C";
+						break;
+					case "spades":
+						result += "S";
+						break;
+				}
+			}
+			return result;
+		}
 
         //From Game - posts an in-game action from active player and sends game stat updates to all players
         public async Task GameAction(string roomCode, string jsonAction)
         {
-            Console.Out.WriteLine("Test");
             GameAction result = JsonConvert.DeserializeObject<GameAction>(jsonAction);
             switch(result.action)
             {
                 case "take":
                     await _db.Take(roomCode, result.playerName, result.hand, result.table);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
-                    break;
+					Clients.Group(roomCode).showText(result.playerName + " takes " + formatCardNames(result.table) + " with " + formatCardNames(result.hand) + ".");
+					break;
                 case "ask":
                     Game game = await _db.GetGame(roomCode);
                     var matches = new List<Card>();
                     var neededNumbers = result.hand.Select(c => c.number).ToList();
-                    foreach(Card card in game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand)
+					string showText = result.playerName + " asks for " + formatCardNames(result.hand, true) + " from " + result.misc;
+					foreach (Card card in game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand)
                     {
                         if(neededNumbers.Contains(card.number))
                         {
@@ -285,40 +343,63 @@ namespace SixJuice
                     if(matches.Count == 0)
                     {
                         Clients.Caller.nothingFrom(result.misc);
+						Clients.Group(roomCode).showText(showText + ".");
                         break;
                     }
+					showText += " and receives " + formatCardNames(matches) + ".";
                     Card[] copydest = new Card[matches.Count];
                     matches.CopyTo(copydest);
                     result.hand = copydest.ToList();
                     await _db.UseForKing(roomCode, result.playerName, result.misc, matches);
                     result.action = "u4K";
                     Clients.Group(roomCode).receivePlayerGameAction(JsonConvert.SerializeObject(result));
-                    break;
+					Clients.Group(roomCode).showText(showText);
+					break;
                 case "useK":
                     await _db.PlayKings(roomCode, result.playerName, result.hand);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
-                    break;
+					Clients.Group(roomCode).showText(result.playerName + " plays " + formatCardNames(result.hand) + ".");
+					break;
                 case "u4K":
-                    await _db.UseForKing(roomCode, result.playerName, result.misc, result.hand);
+					string u4kshowText = result.playerName + " uses " + formatCardNames(result.hand) + " from ";
+					await _db.UseForKing(roomCode, result.playerName, result.misc, result.hand);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
-                    break;
+					if(result.misc.Equals("table")) {
+						u4kshowText += "the table on their kings.";
+					} else
+					{
+						if(result.misc.Equals(result.playerName))
+						{
+							u4kshowText += "their hand on their kings.";
+						} else
+						{
+							break;
+						}
+					}
+					Clients.Group(roomCode).showText(u4kshowText);
+					break;
                 case "useQ":
                     Clients.Group(roomCode).qcd(jsonAction);
                     break;
                 case "endQ":
+					string endqshowText = " plays " + formatCardNames(result.hand);
                     if (result.misc != null)
                     {
                         await _db.PlayJackOfClubs(roomCode, result.playerName, result.misc, result.hand.ElementAt(0), result.table);
+						endqshowText = result.misc + endqshowText + ", but is stopped by " + result.playerName + " with JC.";
                     }
                     else
                     {
                         await _db.PlayQueen(roomCode, result.playerName, result.hand.ElementAt(0), result.table);
-                    }
+						endqshowText = result.playerName + endqshowText + ".";
+					}
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+					Clients.Group(roomCode).showText(endqshowText);
                     break;
                 case "useJ":
                     await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+					Clients.Group(roomCode).showText(result.playerName + " steals a point card from " + result.misc + " with JS");
                     break;
                 case "discard":
                     //result contains: name, "discard", hand=discarded card, null, null
@@ -345,6 +426,8 @@ namespace SixJuice
                         playerGameAction.misc = newTurn.nextPlayerName;
                         Clients.Client(player.ConnectionId).receivePlayerGameAction(JsonConvert.SerializeObject(playerGameAction));
                     }
+					Clients.Group(roomCode).showText(result.playerName + (result.hand == null ? " ends their turn." : " discards " + formatCardNames(result.hand) + "."));
+					Clients.Group(roomCode).showText(newTurn.nextPlayerName + "'s turn.");
                     break;
 
                 default:
