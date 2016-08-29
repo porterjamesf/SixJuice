@@ -131,6 +131,12 @@ namespace SixJuice.Database
             await games.UpdateOneAsync(filter, update);
         }
 
+		public async Task UpdateDeckCount(string roomCode, int deckCount)
+		{
+			var update = Builders<Game>.Update.Set("DeckCount", deckCount);
+			await games.UpdateOneAsync(getFilter(roomCode), update);
+		}
+
         public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode, string playerName)
         {
             return (await GetGame(roomCode)).Players.Select(p =>
@@ -377,13 +383,13 @@ namespace SixJuice.Database
             }
         }
 
-        public async Task PlayJackOfSpades(string roomCode, string playerName, string victimName)
+        public async Task PlayJackOfSpades(string roomCode, string playerName, string victimName, Card jack)
         {
             Game game = await GetGame(roomCode);
             var builder = Builders<Game>.Filter;
             var playerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
             var playerUpdates = new List<UpdateDefinition<Game>>();
-            playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", new Card { number = 11, suit = "spades" }));
+            playerUpdates.Add(Builders<Game>.Update.Pull("Players.$.Hand", jack));
             var otherPlayerFilter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", victimName);
             Card cardToPull = game.Players.Where(p => p.Name.Equals(victimName)).Single().PointCards[0];
             var otherPlayerUpdate = Builders<Game>.Update.Pull("Players.$.PointCards", cardToPull);

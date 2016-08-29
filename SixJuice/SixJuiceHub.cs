@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using Microsoft.AspNet.SignalR;
 using System.Threading.Tasks;
 using SixJuice.Database;
 using SixJuice.Models;
 using Newtonsoft.Json;
-using System.Threading;
 
 namespace SixJuice
 {
@@ -16,10 +14,45 @@ namespace SixJuice
     {
         public static IDatabaseHelper _db = new MongoDBHelper();
 
-        //From Index
-        public async Task NewGame()
+		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
+		private bool mock = true;
+		private List<Card> player1Hand = (new Card[] {
+			new Card { number = 10, suit = "spades", additional = "deck0" },
+			new Card { number = 7, suit = "spades", additional = "deck0" },
+			new Card { number = 9, suit = "spades", additional = "deck0" },
+			new Card { number = 13, suit = "spades", additional = "deck1" }
+		}).ToList();
+		private List<Card> player2Hand = (new Card[] {
+			new Card { number = 4, suit = "hearts", additional = "deck0" },
+			new Card { number = 4, suit = "clubs", additional = "deck1" }
+		}).ToList();
+		private List<Card> table = (new Card[] {
+			new Card { number = 1, suit = "spades", additional = "deck0" },
+			new Card { number = 2, suit = "spades", additional = "deck1" },
+			new Card { number = 3, suit = "spades", additional = "deck0" },
+			new Card { number = 5, suit = "spades", additional = "deck0" }
+		}).ToList();
+		private bool AreEqual(Card card1, Card card2)
+		{
+			return card1.number == card2.number && card1.suit.Equals(card2.suit) && card1.additional.Equals(card2.additional);
+		}
+		private bool Contains(List<Card> cardList, Card card)
+		{
+			foreach(Card listedCard in cardList)
+			{
+				if (AreEqual(listedCard, card))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		//From Index
+		public async Task NewGame()
         {
             var roomCode = await _db.CreateGame();
+			await _db.UpdateDeckCount(roomCode, 2); //----------------------------------------------------FOR TESTING
             Clients.Caller.goToRoomAs(roomCode, "Player1");
         }
 
@@ -133,17 +166,50 @@ namespace SixJuice
             //Make the deck
             Game game = await _db.GetGame(roomCode);
             string[] suits = { "hearts", "diamonds", "clubs", "spades" };
-            for (int d = 0; d < game.DeckCount; d++)
+			foreach (Player player in game.Players)
+			{
+				player.Hand = new List<Card>();
+			}
+			game.Table = new List<Card>();
+
+			for (int d = 0; d < game.DeckCount; d++)
             {
                 for (int s = 0; s < 4; s++)
                 {
                     for (int n = 1; n <= 13; n++)
                     {
-                        game.Deck.Add(new Card
-                        {
-                            suit = suits[s],
-                            number = n
-                        });
+						Card card = new Card {
+							suit = suits[s],
+							number = n,
+							additional = "deck" + d
+						};
+						bool added = false;
+						if (mock)
+						{
+							if (Contains(player1Hand, card))
+							{
+								game.Players[0].Hand.Add(card);
+								added = true;
+							} else
+							{
+								if (Contains(player2Hand, card))
+								{
+									game.Players[1].Hand.Add(card);
+									added = true;
+								}
+								else
+								{
+									if (Contains(table, card))
+									{
+										game.Table.Add(card);
+										added = true;
+									}
+								}
+							}
+						}
+						if (!added) {
+							game.Deck.Add(card);
+						}
                     }
                 }
             }
@@ -159,10 +225,10 @@ namespace SixJuice
             //Deal and reset ready status - Ready is now used to track players' connections to the room
             foreach (Player player in game.Players)
             {
-                player.Hand = draw(game.Deck, 4);
+				player.Hand.AddRange(draw(game.Deck, 4 - player.Hand.Count));
                 player.Ready = false;
             }
-            game.Table = draw(game.Deck, 4);
+			game.Table.AddRange(draw(game.Deck, 4 - game.Table.Count));
             //Populate the first KSources
             game.Players[0].KSources = new List<List<Card>>();
             game.Players[0].KSources.Add(game.Players[0].Hand);
@@ -253,7 +319,7 @@ namespace SixJuice
                 });
             }
             Clients.Caller.receivePlayerGameState(JsonConvert.SerializeObject(pgs));
-			Clients.Group(roomCode).showText(playerName + " has rejoined the game.");
+			Clients.Group(roomCode).showText(playerName + " has joined the game.");
         }
 
 		// Converts a list of cards to a string e.g. 4H, JS and KD
@@ -328,7 +394,14 @@ namespace SixJuice
                     var matches = new List<Card>();
                     var neededNumbers = result.hand.Select(c => c.number).ToList();
 					string showText = result.playerName + " asks for " + formatCardNames(result.hand, true) + " from " + result.misc;
-					foreach (Card card in game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand)
+					List<Card> askedPlayersHand = game.Players.Where(p => p.Name.Equals(result.misc)).Single().Hand;
+					List<Card> power4sand7s = askedPlayersHand.Where(c => c.suit.Equals("hearts") && (c.number == 4 || c.number == 7)).ToList();
+					if(power4sand7s.Count > 0) // If their hand has power 4's or 7's, they are moved to the end so that they get checked last and thus spared if possible
+					{
+						askedPlayersHand.RemoveAll(c => c.suit.Equals("hearts") && (c.number == 4 || c.number == 7));
+						askedPlayersHand.AddRange(power4sand7s);
+					}
+					foreach (Card card in askedPlayersHand)
                     {
                         if(neededNumbers.Contains(card.number))
                         {
@@ -361,16 +434,16 @@ namespace SixJuice
 					Clients.Group(roomCode).showText(result.playerName + " plays " + formatCardNames(result.hand) + ".");
 					break;
                 case "u4K":
-					string u4kshowText = result.playerName + " uses " + formatCardNames(result.hand) + " from ";
+					string u4kshowText = result.playerName + " adds " + formatCardNames(result.hand) + " to their kings from ";
 					await _db.UseForKing(roomCode, result.playerName, result.misc, result.hand);
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
 					if(result.misc.Equals("table")) {
-						u4kshowText += "the table on their kings.";
+						u4kshowText += "the table.";
 					} else
 					{
 						if(result.misc.Equals(result.playerName))
 						{
-							u4kshowText += "their hand on their kings.";
+							u4kshowText += "their hand.";
 						} else
 						{
 							break;
@@ -397,7 +470,7 @@ namespace SixJuice
 					Clients.Group(roomCode).showText(endqshowText);
                     break;
                 case "useJ":
-                    await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc);
+                    await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc, result.hand.ElementAt(0));
                     Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
 					Clients.Group(roomCode).showText(result.playerName + " steals a point card from " + result.misc + " with JS");
                     break;

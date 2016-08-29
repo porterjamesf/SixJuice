@@ -15,7 +15,8 @@ namespace SixJuice.Database
         Task RemoveEmptyGame(string roomCode);
         Task AddPlayer(string roomCode, string playerName);
         Task RemovePlayer(string roomCode, string playerName);
-        Task<List<PlayerViewModel>> GetPlayerList(string roomCode, string playerName);
+		Task UpdateDeckCount(string roomCode, int deckCount);
+		Task<List<PlayerViewModel>> GetPlayerList(string roomCode, string playerName);
         Task<List<PlayerViewModel>> PlayerReady(string roomCode, string playerName, bool isReady);
         Task SaveGame(string roomCode, Game game);
 
@@ -27,7 +28,7 @@ namespace SixJuice.Database
         Task PlayKings(string roomCode, string playerName, List<Card> kings);
         Task PlayQueen(string roomCode, string playerName, Card queen, List<Card> fromTable);
         Task PlayJackOfClubs(string roomCode, string playerName, string queenPlayerName, Card queen, List<Card> fromTable);
-        Task PlayJackOfSpades(string roomCode, string playerName, string victimName);
+        Task PlayJackOfSpades(string roomCode, string playerName, string victimName, Card jack);
         Task UseForKing(string roomCode, string playerName, string source, List<Card> cards);
         Task<Results> PlayerDone(string roomCode, string playerName);
 

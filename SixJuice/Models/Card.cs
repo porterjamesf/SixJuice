@@ -11,5 +11,7 @@ namespace SixJuice.Models
         public int number { get; set; }
         //hearts, diamonds, clubs, spades
         public string suit { get; set; }
+		//other info - usually deck id
+		public string additional { get; set; }
     }
 }
