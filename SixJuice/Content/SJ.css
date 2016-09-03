@@ -26,12 +26,12 @@ button {
 .waitOverlay {
     position:absolute;
     background-color:rgba(0, 0, 0, 0.3);
-    z-index: 110;
+    z-index: 120;
 }
 
 .queenOverlay {
     position: absolute;
-    z-index: 120;
+    z-index: 115;
     background-color: rgba(10, 0, 10, 0.09);
 }
 

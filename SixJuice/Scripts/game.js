@@ -11,7 +11,6 @@
 
     //Receives list of player info, triggering wait for players overlay showing/hiding
     hub.client.playersReady = function (players) {
-        console.log("players ready " + players);
         playerInfo = JSON.parse(players);
 
         allReady = true;
@@ -23,17 +22,17 @@
             }
         }
         if (allReady) {
-            $('#wait').hide();
-            if (playedQueen != null) { //Someone is reconnecting during queen count down
-                if (playerOKs[0] != playerName) { //I'm the queen player: Send queen count down status w/ all ok's
-                    hub.server.resQ(roomCode, queenCount, playedQueen, playerName, playerOKs);
-                } else { //I'm not the queen player: Send queen count down status w/ report of whether I've ok'd
-                    hub.server.resQ(roomCode, queenCount, playedQueen, queenPlayerName, queenOK ? ["ok", playerName] : ["ok"]);
+        	$('#wait').hide();
+            if (playedQueensAndJacks.length > 0) { //Someone is reconnecting during queen/joc count down
+                if (playerOKs[0] != playerName) { //I'm the queen/joc player: Send queen count down status w/ all ok's
+                    hub.server.resQ(roomCode, queenCount, playedQueensAndJacks, queenJocPlayers, playerOKs);
+                } else { //I'm not the queen/joc player: Send queen count down status w/ report of whether I've ok'd
+                    hub.server.resQ(roomCode, queenCount, playedQueensAndJacks, queenJocPlayers, queenOK ? ["ok", playerName] : ["ok"]);
                 }
             }
         } else {
             $('#wait').show();
-            if (playedQueen != null) {
+            if (playedQueensAndJacks.length > 0) {
                 queenPause = true;
             }
         }
@@ -41,13 +40,11 @@
 
     //Identifies this connection to the server, associating it with the room and player
     hub.client.identify = function () {
-    	console.log("identify " + playerName);
         hub.server.identify(playerName, roomCode);
     }
 
     //Triggers OnDisconnected immediately no matter how the user leaves the page
     window.onbeforeunload = function () {
-    	console.log("on before unload");
         hub.server.stopConnection();
     }
 
@@ -72,7 +69,6 @@
     //Game joining callback to ensure the player we're joining as is not already joined
     hub.client.idConfirm = function (isConfirmed) {
         if (isConfirmed) {
-            console.log("join game as");
             hub.server.joinGameAs(roomCode, playerName);
             hub.server.getPlayerGameState(roomCode, playerName);
         } else {
@@ -992,9 +988,12 @@
     }
 
     function CardObj(cardId) {
-        this.number = getCardNumber(cardId);
-        this.suit = getCardSuit(cardId);
-        this.additional = getAdditional(cardId);
+    	this.number = getCardNumber(cardId);
+    	this.suit = getCardSuit(cardId);
+    	this.additional = getAdditional(cardId);
+        //this.getId = function() {
+        //	return getCardId(this.number, this.suit, this.additional);
+        //}
     }
 
     //----------GAME---------------
@@ -1015,10 +1014,11 @@
     queenTimer = null;
     queenCount = 10;
     queenOK = false;
-    playedQueen = null;
+    playedQueensAndJacks = [];
     playerOKs = [];
+    jocplayers = [];
     queenPause = false;
-    queenPlayerName = null;
+    queenJocPlayers = [];
     //King overlay objects
     kHand = new CardBar("kHandCards", true); //Needed cards
     kTable = new CardBar("kTableCards", true);
@@ -1251,26 +1251,26 @@
     // Starts a queen count down from the beginning
     hub.client.qcd = function (useQga) {
         var qga = JSON.parse(useQga);
-        startQueenCountDown(qga.playerName, qga.hand[0], 15, false);
+        startQueenCountDown(qga.playerName.split("&"), qga.hand, 15, false);
     }
     // ResQ - Queen count down resume; This is sent by other clients (bounced off server) when a reconnect occurs during
     // a queen count down. For players still connected and counting down, this simply resumes (and aligns count). For the
     // reconnecting player (who is not counting down), this starts the count down. If the reconnecting player is the one
     // who played the queen, incoming resQ events from other players updates the internal OK list
-    hub.client.resQ = function (count, queenCard, queenPlayer, nonOks) {
-        if (playedQueen == null) { // This client is not counting, so it must be the reconnecting one
-            if (queenPlayer == playerName) {
-                startQueenCountDown(playerName, queenCard, count, false);
+    hub.client.resQ = function (count, queenAndJacks, queenAndJackPlayers, nonOks) {
+        if (playedQueensAndJacks.length == 0) { // This client is not counting, so it must be the reconnecting one
+            if (queenAndJackPlayers[0] == playerName) {
+                startQueenCountDown(queenAndJackPlayers, queenAndJacks, count, false);
             } else {
                 if (nonOks[0] != "ok") {
-                    startQueenCountDown(queenPlayer, queenCard, count, nonOks.indexOf(playerName) == -1);
+                    startQueenCountDown(queenAndJackPlayers, queenAndJacks, count, nonOks.indexOf(playerName) == -1);
                 }
             }
         } else { // Already counting down, so just resume
             queenCount = count;
             queenPause = false;
         }
-        if (queenPlayer == playerName) { // Update the OK list for the queen player
+        if (queenAndJackPlayers[0] == playerName) { // Update the OK list for the queen/last jack player
             if (nonOks[0] == "ok" && nonOks.length == 2) {
                 okq(nonOks[1]);
             }
@@ -1279,38 +1279,44 @@
     // Starts a queen count down. The player who played the queen sets up the queen variables to keep track of who still
     // needs to OK the queen or not. The other players get buttons for OKing (or playing the Jack of clubs). All players
     // schedule the count down. When the count runs out, anyone who hasn't will automatically send an OK.
-    startQueenCountDown = function (queenPlayer, queenCard, timerCount, isOKd) {
+    startQueenCountDown = function (queenPlayers, queensAndJacks, timerCount, isOKd) {
         $('#jack').hide();
         $('#nojack').hide();
-        queenPlayerName = queenPlayer;
-        if (queenPlayer == playerName) {
+        queenJocPlayers = queenPlayers;
+        jocplayers = [];
+        if (queenPlayers[0] == playerName) {
             queenOK = true;
             playerOKs = [];
             otherPlayers.forEach(function (oPlayer, index) {
                 playerOKs.push(oPlayer.name);
             });
-            $('#sweeper').text("Playing Queen...");
         } else {
             queenOK = isOKd;
             playerOKs = [playerName];
-            $('#sweeper').text(queenPlayer + " is playing a Queen.");
             if (!queenOK) {
-                var hasJack = false;
+            	var jackCount = 0;
+            	var usedJacks = 0;
+            	queenJocPlayers.forEach(function (qjpName, index) {
+            		if (index < queenJocPlayers.length - 1 && qjpName == playerName) {
+            			usedJacks += 1;
+            		}
+            	});
                 hand.cardList.forEach(function (cardId, index) {
                     if (getImageId(cardId) == "clubs11") {
-                        hasJack = true;
+						jackCount += 1;
                     }
                 });
-                if (hasJack) {
+                if (jackCount > usedJacks) {
                     $('#jack').show();
                 } else {
                     $('#nojack').show();
                 }
             }
         }
+        updateSweeperText();
         $('.queenOverlay').show();
         queenCount = timerCount;
-        playedQueen = queenCard;
+        playedQueensAndJacks = queensAndJacks;
         queenPause = false;
         queenTimer = setInterval(function () {
             if (!queenPause) {
@@ -1332,6 +1338,15 @@
             clickOKQ();
         }
     }
+
+    updateSweeperText = function () {
+    	var text = "";
+    	queenJocPlayers.forEach(function (player, index) {
+    		text = text + "<br>" + (player == playerName ? "P" : player + " is p") + "laying a " + (index == 0 ? "Queen" : "Jack of Clubs") + "...";
+    	});
+    	$('#sweeper').html(text);
+    }
+
     // Method(s) for updating queen OK list, for the queen player only. Removes ok'd name from list. When list is empty,
     // triggers call to complete queen play.
     hub.client.okQueen = function (okingName) {
@@ -1345,14 +1360,16 @@
             table.cardList.forEach(function (cardID, index) {
                 tableCards.push(new CardObj(cardID));
             });
-            hub.server.gameAction(roomCode, JSON.stringify(new GameAction("endQ", [playedQueen], tableCards, null)));
+            var ga = new GameAction("endQ", playedQueensAndJacks, tableCards, null);
+            ga.playerName = queenJocPlayers.join("&");
+            hub.server.gameAction(roomCode, JSON.stringify(ga));
         }
     }
     // Action for clicking the OK button in a queen count down, from a non-queen-playing player
     clickOKQ = function () {
         queenOK = true;
         $('#nojack').hide();
-        hub.server.okQueen(roomCode, playerName);
+        hub.server.okQueen(roomCode, playerName, queenJocPlayers[0]);
     }
 
     hub.client.receivePlayerGameAction = function(pgadata) {
@@ -1544,13 +1561,13 @@
                     }
                 }
                 break;
-            case "endQ":
+        	case "endQ":
                 //Stop count down
-                if (queenTimer != null) {
-                    clearInterval(queenTimer);
-                }
-                playedQueen = null;
-                $('.queenOverlay').hide();
+        		if (queenTimer != null) {
+        			clearInterval(queenTimer);
+        		}
+        		playedQueensAndJacks = [];
+        		$('.queenOverlay').hide();
                 //Remove cards
                 table.clear(); //from table
                 var collectedCards = [];
@@ -1558,47 +1575,23 @@
                     var cardId = getCardId(pga.table[i].number, pga.table[i].suit, pga.table[i].additional);
                     collectedCards.push(cardId);
                 }
-                // remove queen
-                var theQueenPlayer = pga.playerName;
-                var theJackPlayer = null;
-                if (pga.misc != null) {
-                    theQueenPlayer = pga.misc;
-                    theJackPlayer = pga.playerName;
+            	// remove queens and jacks
+                var playerNames = pga.playerName.split("&");
+                for (var i = 0; i < pga.hand.length; i++) {
+                	if (playerNames[i] == playerName) {
+                		hand.removeCard(getCardId(pga.hand[i].number, pga.hand[i].suit, pga.hand[i].additional));
+                	} else {
+                		for (var j = 0; j < otherPlayers.length; j++) {
+                			if (otherPlayers[j].name == playerNames[i]) {
+                				otherPlayers[j].hand.popCard();
+                			}
+                		}
+                	}
+                	collectedCards.push(getCardId(pga.hand[i].number, pga.hand[i].suit, pga.hand[i].additional));
                 }
-                if (theQueenPlayer == playerName) {
-                    hand.removeCard(getCardId(pga.hand[0].number, pga.hand[0].suit, pga.hand[0].additional));
-                } else {
-                    for (var i = 0; i < otherPlayers.length; i++) {
-                        if (otherPlayers[i].name == theQueenPlayer) {
-                            otherPlayers[i].hand.popCard();
-                        }
-                    }
-                }
-                collectedCards.push(getCardId(pga.hand[0].number, pga.hand[0].suit, pga.hand[0].additional));
-                if (theJackPlayer != null) {
-                    // remove jack of clubs, if it was played                                                                       -------DOUBLE JACKS----------
-                    var jackId = null;
-                    if (theJackPlayer == playerName) {
-                        hand.cardList.forEach(function (cardId, index) {
-                            if (getImageId(cardId) == "clubs11") {
-                                jackId = cardId;
-                            }
-                        });
-                        hand.removeCard(jackId);
-                    } else {
-                        for (var i = 0; i < otherPlayers.length; i++) {
-                            if (otherPlayers[i].name == theJackPlayer) {
-                                otherPlayers[i].hand.popCard();
-                            }
-                        }
-                    }
-                    collectedCards.push(jackId == null ? getCardId(11, "clubs", "used") : jackId);
-                }
-                // Figure out who to give points to
-                var pointReceiver = (theJackPlayer == null ? theQueenPlayer : theJackPlayer);
                 //Adding cards to card piles
                 for (var i = 0; i < collectedCards.length; i++) {
-                    if (pointReceiver == playerName) {
+                    if (playerNames[0] == playerName) {
                         if (isPointCard(collectedCards[i])) {
                             pointCardPile.pushCard(null);
                         } else {
@@ -1606,7 +1599,7 @@
                         }
                     } else {
                         for (var j = 0; j < otherPlayers.length; j++) {
-                            if (otherPlayers[j].name == pointReceiver) {
+                        	if (otherPlayers[j].name == playerNames[0]) {
                                 if (isPointCard(collectedCards[i])) {
                                     otherPlayers[j].pointCardPile.pushCard(null);
                                 } else {
@@ -1617,7 +1610,7 @@
                     }
                 }
                 //Update actions
-                if (theQueenPlayer == playerName) {
+                if (playerNames[playerNames.length - 1] == playerName) {
                     updateKingsOverlay();
                     updateActions();
                 }
@@ -2017,7 +2010,8 @@
                             tableCards.push(new CardObj(cardID));
                         });
                         update = JSON.stringify(new GameAction("endQ", [usedCard], tableCards, null));
-                    } else { //Someone could have the JOS, so countdown is started
+                        hub.server.gameAction(roomCode, JSON.stringify(ga));
+                    } else { //Someone could have the JC, so countdown is started
                         update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
                     }
                     break;
@@ -2068,16 +2062,53 @@
         $('#HoldJack').on('click', function () {
             queenOK = true;
             $('#jack').hide();
-            hub.server.okQueen(roomCode, playerName);
+            hub.server.okQueen(roomCode, playerName, queenJocPlayers[0]);
         });
         $('#UseJack').on('click', function () {
-            $('#jack').hide();
-            var tableCards = [];
-            table.cardList.forEach(function (cardID, index) {
-                tableCards.push(new CardObj(cardID));
-            });
-            var update = JSON.stringify(new GameAction("endQ", [playedQueen], tableCards, queenPlayerName));
-            hub.server.gameAction(roomCode, update);
+        	$('#jack').hide();
+        	var noCards = true;
+        	if (numberOfDecks > 1) { // With only one deck, there's only one JoC, so we don't bother with the extra JoC count down. With 2 or more, players may not have kept track, so a count down is done.
+        		otherPlayers.forEach(function (oPlayer, index) {
+        			// Count up the number of cards in this player's hand accounted for by the Queen and JoC's this player has played
+        			var playedQsAndJs = 0;
+        			queenJocPlayers.forEach(function (qjocPlayerName, index) {
+        				if (qjocPlayerName == oPlayer.name) {
+        					playedQsAndJs += 1;
+        				}
+        			});
+        			// Not including those, are there any cards left that could be more JoC's?
+        			if (oPlayer.hand.cardList.length > playedQsAndJs) {
+        				noCards = false;
+        			}
+        		});
+        	}
+        	queenJocPlayers.splice(0, 0, playerName);
+        	// Need to use a JoC that isn't already played
+        	var chosenJoC = null;
+        	hand.cardList.forEach(function (cardId, index) {
+        		if (getImageId(cardId) != "clubs11") {
+        			return;
+        		}
+        		if (playedQueensAndJacks.find(function (cardobj) {
+        			return getCardId(cardobj.number, cardobj.suit, cardobj.additional) == cardId;
+        		}) != undefined) {
+        			return;
+        		}
+        		chosenJoC = new CardObj(cardId);
+        	});
+        	playedQueensAndJacks.splice(0, 0, chosenJoC);
+        	if (noCards) { // No cards left besides those played in this queen/jack exchange
+        		var tableCards = [];
+        		table.cardList.forEach(function (cardID, index) {
+        			tableCards.push(new CardObj(cardID));
+        		});
+        		var ga = new GameAction("endQ", playedQueensAndJacks, tableCards, null);
+        	} else { // Other cards left: start a new count down for more JoC's
+        		var ga = new GameAction("useQ", playedQueensAndJacks, null, null);
+        	}
+        	ga.playerName = queenJocPlayers.join("&");
+        	var update = JSON.stringify(ga);
+        	hub.server.gameAction(roomCode, update);
         });
         $('#Discard').on('click', function () {
             clearActions();

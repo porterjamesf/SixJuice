@@ -17,14 +17,16 @@ namespace SixJuice
 		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
 		private bool mock = true;
 		private List<Card> player1Hand = (new Card[] {
-			new Card { number = 10, suit = "spades", additional = "deck0" },
-			new Card { number = 7, suit = "spades", additional = "deck0" },
+			new Card { number = 12, suit = "spades", additional = "deck0" },
+			new Card { number = 11, suit = "clubs", additional = "deck0" },
 			new Card { number = 9, suit = "spades", additional = "deck0" },
-			new Card { number = 13, suit = "spades", additional = "deck1" }
+			new Card { number = 8, suit = "spades", additional = "deck1" }
 		}).ToList();
 		private List<Card> player2Hand = (new Card[] {
-			new Card { number = 4, suit = "hearts", additional = "deck0" },
-			new Card { number = 4, suit = "clubs", additional = "deck1" }
+			new Card { number = 11, suit = "clubs", additional = "deck1" },
+			new Card { number = 7, suit = "hearts", additional = "deck0" },
+			new Card { number = 6, suit = "hearts", additional = "deck0" },
+			new Card { number = 5, suit = "clubs", additional = "deck1" }
 		}).ToList();
 		private List<Card> table = (new Card[] {
 			new Card { number = 1, suit = "spades", additional = "deck0" },
@@ -455,26 +457,20 @@ namespace SixJuice
                     Clients.Group(roomCode).qcd(jsonAction);
                     break;
                 case "endQ":
-					string endqshowText = " plays " + formatCardNames(result.hand);
-                    if (result.misc != null)
-                    {
-                        await _db.PlayJackOfClubs(roomCode, result.playerName, result.misc, result.hand.ElementAt(0), result.table);
-						endqshowText = result.misc + endqshowText + ", but is stopped by " + result.playerName + " with JC.";
-                    }
-                    else
-                    {
-                        await _db.PlayQueen(roomCode, result.playerName, result.hand.ElementAt(0), result.table);
-						endqshowText = result.playerName + endqshowText + ".";
+					string[] queenJocPlayers = result.playerName.Split('&');
+					await _db.PlayQueenAndJacks(roomCode, queenJocPlayers.ToList(), result.hand, result.table);
+					Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+					for (int i = queenJocPlayers.Length - 1; i >= 0; i--)
+					{
+						Clients.Group(roomCode).showText(queenJocPlayers[i] + " plays " + formatOneCardName(result.hand.ElementAt(i), false));
 					}
-                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
-					Clients.Group(roomCode).showText(endqshowText);
                     break;
-                case "useJ":
-                    await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc, result.hand.ElementAt(0));
-                    Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
+				case "useJ":
+					await _db.PlayJackOfSpades(roomCode, result.playerName, result.misc, result.hand.ElementAt(0));
+					Clients.Group(roomCode).receivePlayerGameAction(jsonAction);
 					Clients.Group(roomCode).showText(result.playerName + " steals a point card from " + result.misc + " with JS");
-                    break;
-                case "discard":
+					break;
+				case "discard":
                     //result contains: name, "discard", hand=discarded card, null, null
                     NewTurn newTurn = await _db.Discard(roomCode, result.playerName, (result.hand == null? null : result.hand.ElementAt(0)));
                     
@@ -509,18 +505,17 @@ namespace SixJuice
         }
 
         //From Game: passes on the message that a given player OK's the use of a queen. Message is then sent to the
-        // queen player.
-        public async Task okQueen(string roomCode, string playerName)
+        // queen player or most recent Jack of Clubs player
+        public async Task okQueen(string roomCode, string playerName, string receiverName)
         {
-            Game game = await _db.GetGame(roomCode);
-            string conId = await _db.GetConnectedPlayerId(roomCode, game.Players.ElementAt(game.Turn).Name);
+            string conId = await _db.GetConnectedPlayerId(roomCode, receiverName);
             Clients.Client(conId).okQueen(playerName);
         }
 
         //From Game: Broadcasts resQ messages to all clients (for resuming queen count down after reconnection)
-        public void resQ(string roomCode, int count, Card queen, string queenPlayer, List<string> nonOkd)
+        public void resQ(string roomCode, int count, List<Card> queenAndJacks, List<string> queenAndJackPlayers, List<string> nonOkd)
         {
-            Clients.Group(roomCode).resQ(count, queen, queenPlayer, nonOkd);
+            Clients.Group(roomCode).resQ(count, queenAndJacks, queenAndJackPlayers, nonOkd);
         }
 
         //From Game: Registers a player as being done and passes to the next player. Also detects end of game

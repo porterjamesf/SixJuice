@@ -26,9 +26,10 @@ namespace SixJuice.Database
         Task<NewTurn> Discard(string roomCode, string playerName, Card discard);
         Task Take(string roomCode, string playerName, List<Card> fromHand, List<Card> fromTable);
         Task PlayKings(string roomCode, string playerName, List<Card> kings);
-        Task PlayQueen(string roomCode, string playerName, Card queen, List<Card> fromTable);
-        Task PlayJackOfClubs(string roomCode, string playerName, string queenPlayerName, Card queen, List<Card> fromTable);
-        Task PlayJackOfSpades(string roomCode, string playerName, string victimName, Card jack);
+		Task PlayQueenAndJacks(string roomCode, List<string> playerNames, List<Card> queenAndJacks, List<Card> fromTable);
+		//Task PlayQueen(string roomCode, string playerName, Card queen, List<Card> fromTable);
+		//Task PlayJackOfClubs(string roomCode, string playerName, string queenPlayerName, Card queen, List<Card> fromTable);
+		Task PlayJackOfSpades(string roomCode, string playerName, string victimName, Card jack);
         Task UseForKing(string roomCode, string playerName, string source, List<Card> cards);
         Task<Results> PlayerDone(string roomCode, string playerName);
 
