@@ -13,6 +13,10 @@ namespace SixJuice.Database
     {
         public IMongoDatabase _db;
 
+        public TimeSpan expirePeriod = TimeSpan.FromHours(2);
+        //NOTE: if you change the expire time, make sure to drop the old index from the existing database manually using db.games.dropIndex("DateCreated_-1")
+        // The new index will be created automatically, but only if no index exists on that field
+
         public IMongoCollection<Game> games
         {
             get
@@ -31,6 +35,16 @@ namespace SixJuice.Database
         public MongoDBHelper()
         {
             _db = (new MongoClient(Properties.Settings.Default.connectionString)).GetDatabase("Sixjuice");
+
+            // Checks if the expire period on the date created index has been changed. If so, drops the index and creates a new one with the updated expire period
+            if (!TimeSpan.FromSeconds(games.Indexes.List().ToList().Where(i => i.Values.ElementAt(2).AsString.Equals("DateCreated_-1")).Single().Values.ElementAt(4).AsDouble).Equals(expirePeriod))
+            {
+                games.Indexes.DropOneAsync("DateCreated_-1");
+                games.Indexes.CreateOneAsync(Builders<Game>.IndexKeys.Descending("DateCreated"), new CreateIndexOptions
+                {
+                    ExpireAfter = expirePeriod
+                });
+            }
         }
 
         // Helper for game finding filter
@@ -59,6 +73,7 @@ namespace SixJuice.Database
             //Add new game to database
             Game gameToAdd = new Game
             {
+                DateCreated = DateTime.UtcNow,
                 RoomCode = roomCode,
                 Table = new List<Card>(),
                 Deck = new List<Card>(),
@@ -88,7 +103,10 @@ namespace SixJuice.Database
 
         public async Task DeleteGame(string roomCode)
         {
-            await games.DeleteOneAsync(getFilter(roomCode));
+            // Deletes game by setting is DateCreated field to a time such that its expiration will arrive in 2 minutes.
+            // This way, it's still around for a moment if players want to go back to check the scores, but will disappear shortly.
+            var expireUpdate = Builders<Game>.Update.Set("DateCreated", DateTime.UtcNow.Subtract(expirePeriod).Add(TimeSpan.FromMinutes(2)));
+            await games.UpdateOneAsync(getFilter(roomCode), expireUpdate);
         }
         public async Task RemoveEmptyGame(string roomCode)
         {
@@ -137,14 +155,14 @@ namespace SixJuice.Database
 			await games.UpdateOneAsync(getFilter(roomCode), update);
 		}
 
-        public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode, string playerName)
+        public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode)
         {
             return (await GetGame(roomCode)).Players.Select(p =>
             {
                 return new PlayerViewModel
                 {
                     playerName = p.Name,
-                    ready = p.Name.Equals(playerName) ? p.Ready : p.Done || p.Ready
+                    ready = p.Ready
                 };
             }).ToList();
         }
@@ -163,7 +181,7 @@ namespace SixJuice.Database
             var filter = builder.Eq("RoomCode", roomCode) & builder.Eq("Players.Name", playerName);
             var update = Builders<Game>.Update.Set("Players.$.Ready", isReady);
             await games.UpdateOneAsync(filter, update);
-            return await GetPlayerList(roomCode, playerName);
+            return await GetPlayerList(roomCode);
         }
 
         #region Game Play
@@ -323,16 +341,15 @@ namespace SixJuice.Database
 			}
 
 			var sortedCards = sortCards(collectedCards);
-			int collector = playerNames.Count - 1;
 			//Adding cards to point card pile
 			for (int i = 0; i < sortedCards[0].Count; i++)
 			{
-				updateHolders[collector].Add(Builders<Game>.Update.Push("Players.$.PointCards", sortedCards[0].ElementAt(i)));
+				updateHolders[0].Add(Builders<Game>.Update.Push("Players.$.PointCards", sortedCards[0].ElementAt(i)));
 			}
 			//Adding cards to normal card pile
 			for (int i = 0; i < sortedCards[1].Count; i++)
 			{
-				updateHolders[collector].Add(Builders<Game>.Update.Push("Players.$.NormalCards", sortedCards[1].ElementAt(i)));
+				updateHolders[0].Add(Builders<Game>.Update.Push("Players.$.NormalCards", sortedCards[1].ElementAt(i)));
 			}
 
 			var roomFilter = getFilter(roomCode);

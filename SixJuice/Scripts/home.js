@@ -11,6 +11,86 @@
     $('#go').text("READY");
     $('#go').prop('disabled', false);
 
+    //-------- SIZING --------------
+    width = 0;      //Total width, set on window sizing events
+    height = 0;     //Total height
+
+    defaultMargin = 5;      //Default margin value to use in between elements
+    minSideMargin = 20;     //Minimum margin on sides buffering the big buttons
+    boxWidths = [          //Minimum and maximum widths:
+        60, 400,                // Standard button
+        60, 400,                // "SixJuice"
+        45, 300,                // "Room Code:"
+        45, 300,                // "<the room code>"
+        60, 400,                // Player list
+        45, 300                 // "Your Name:"
+    ];
+    boxHeights = [          //Minimum and maximum heights:
+        15, 100,                // "Enter Room Code:"
+        20, 160,                // "SixJuice"
+        15, 100,                // "Room Code:"
+        20, 160,                // "<the room code>"
+        30, 1000,               // Player list (no max)
+        15, 100                 // "Your Name:"
+    ];
+    enums = [
+        "Button", //If you change the enum order, always leave this one first
+        "SixJuice",
+        "RoomCode",
+        "RoomCodeValue",
+        "PlayerList",
+        "YourName"
+    ];
+    calcedWidths = [];
+    calcedHeights = [];
+
+    isPortrait = true;
+
+    // Sizing event
+    resize = function (wid, hei) {
+        isPortrait = hei > wid;
+        calcedWidths = [];
+        calcedHeights = [];
+
+        // Calculation of sizes
+        enums.forEach(function (index, value) {
+            wresult = 0;
+            hresult = 0;
+            switch (value) {
+                case "Button":
+                    wresult = (wid - 2 * minSideMargin) / (isPortrait ? 1 : 2) - (isPortrait ? 0 : defaultMargin);
+                    hresult = hei / (isPortrait ? 5.0 : 3.0) - defaultMargin;
+                    break;
+                case "SixJuice":
+                    wresult = wid - 2 * minSideMargin;
+                    hresult = calcedHeights[0];
+                    break;
+                case "RoomCode":
+                    wresult = calcedWidths[0] / 2;
+                    hresult = calcedHeights[0] * 0.7;
+                    break;
+                case "RoomCodeValue":
+                    wresult = calcedWidths[0] / 2;
+                    hresult = calcedHeights[0] * 1.1;
+                    break;
+                case "PlayerList":
+                    wresult = calcedWidths[0];
+                    hresult = isPortrait ?
+                        hei - calcedHeights[0] * 4.5 - defaultMargin * 7 :
+                        hei - calcedHeights[0] * 1.1 - defaultMargin * 3;
+                    break;
+                case "YourName":
+                    wresult = calcedWidths[0] / 2;
+                    hresult = calcedHeights[0] * 0.7;
+                    break;
+            }
+            calcedWidths.push(Math.min(Math.max(wresult, boxWidths[index * 2 + 1]), boxWidths[index * 2]));
+            calcedHeights.push(hresult);
+        });
+
+        //Placing elements
+
+    }
     //----------- START ----------------
 
     $('#roomCodeValue').focus();

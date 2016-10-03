@@ -15,7 +15,7 @@ namespace SixJuice
         public static IDatabaseHelper _db = new MongoDBHelper();
 
 		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
-		private bool mock = true;
+		private bool mock = false;
 		private List<Card> player1Hand = (new Card[] {
 			new Card { number = 12, suit = "spades", additional = "deck0" },
 			new Card { number = 11, suit = "clubs", additional = "deck0" },
@@ -54,7 +54,7 @@ namespace SixJuice
 		public async Task NewGame()
         {
             var roomCode = await _db.CreateGame();
-			await _db.UpdateDeckCount(roomCode, 2); //----------------------------------------------------FOR TESTING
+			//await _db.UpdateDeckCount(roomCode, 2); //----------------------------------------------------FOR TESTING
             Clients.Caller.goToRoomAs(roomCode, "Player1");
         }
 
@@ -112,7 +112,7 @@ namespace SixJuice
                 await _db.AddConnectedPlayer(Context.ConnectionId, playerName, roomCode, "Room");
 
                 await Groups.Add(Context.ConnectionId, roomCode);
-                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, playerName)));
+                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
             } catch (MongoDBHelper.NoSuchGameException)
             {
                 Clients.Caller.cancelJoinRoom();
@@ -123,13 +123,13 @@ namespace SixJuice
         public async Task ChangeName(string roomCode, string newName)
         {
             //Validation
-            var fail = (await _db.GetPlayerList(roomCode, newName)).Select(p => p.playerName).ToList().Contains(newName);
+            var fail = (await _db.GetPlayerList(roomCode)).Select(p => p.playerName).ToList().Contains(newName);
             Clients.Caller.nameChangeCallback(newName, fail);
             if(!fail)
             {
                 //Name change
                 await _db.ChangePlayerName(Context.ConnectionId, newName);
-                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, newName)));
+                Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
             }
         }
 
@@ -248,7 +248,7 @@ namespace SixJuice
         public async Task Rejoin(string roomCode)
         {
             await Groups.Add(Context.ConnectionId, roomCode);
-            Clients.Caller.playersReady(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode, "")));
+            Clients.Caller.playersReady(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
         }
 
         //From Rejoin - Adds a connected player for the newly joining connection
@@ -261,7 +261,7 @@ namespace SixJuice
         // (this is what guards against url tinkering to break the site)
         public async Task ConfirmId(string roomCode, string playerName)
         {
-            var player = (await _db.GetPlayerList(roomCode, playerName)).Where(p => p.playerName.Equals(playerName));
+            var player = (await _db.GetPlayerList(roomCode)).Where(p => p.playerName.Equals(playerName));
             bool result = false;
             if(player.Count() == 1)
             {
@@ -566,15 +566,26 @@ namespace SixJuice
                 {
                     await _db.RemoveConnectedPlayer(Context.ConnectionId);
                     await _db.RemovePlayer(player.RoomCode, player.PlayerName);
-                    Clients.Group(player.RoomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(player.RoomCode, player.PlayerName)));
+                    Clients.Group(player.RoomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(player.RoomCode)));
 
                     //Deletion of empty game
                     await _db.RemoveEmptyGame(player.RoomCode);
                 }
                 if(player.Screen.Equals("Game"))
                 {
+                    Game game = await _db.GetGame(player.RoomCode);
                     await _db.RemoveConnectedPlayer(Context.ConnectionId);
-                    Clients.Group(player.RoomCode).playersReady(JsonConvert.SerializeObject(await _db.PlayerReady(player.RoomCode, player.PlayerName, false)));
+                    var playerList = await _db.PlayerReady(player.RoomCode, player.PlayerName, false);
+                    if (game.Results == null)
+                    {
+                        Clients.Group(player.RoomCode).playersReady(JsonConvert.SerializeObject(playerList));
+                    } else
+                    {
+                        if (playerList.Where(p => p.ready).Count() == 0) // Game is over and the last player has disconnected
+                        {
+                            await _db.DeleteGame(player.RoomCode);
+                        }
+                    }
                 }
             }
             catch (MongoDBHelper.NoSuchPlayerException)

@@ -374,7 +374,7 @@ button {
 
 .cardSelected {
     top: -8px;
-    box-shadow: inset 0 0 0 1000px rgba(155,0,255,.12);
+    /*box-shadow: inset 0 0 0 1000px rgba(155,0,255,.12);*/
 }
 
 .boardrow {

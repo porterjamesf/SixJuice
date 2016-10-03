@@ -14,11 +14,13 @@
         playerInfo = JSON.parse(players);
 
         allReady = true;
-        $('#waitList').empty();
-        for (var i = 0; i < playerInfo.length; i++) {
-            if (!playerInfo[i].ready) {
-                $('#waitList').append('<span class="smallText spiv">'.concat(playerInfo[i].playerName, '</span>'));
-                allReady = false;
+        if (gameOverNotShown) {
+            $('#waitList').empty();
+            for (var i = 0; i < playerInfo.length; i++) {
+                if (!playerInfo[i].ready) {
+                    $('#waitList').append('<span class="smallText spiv">'.concat(playerInfo[i].playerName, '</span>'));
+                    allReady = false;
+                }
             }
         }
         if (allReady) {
@@ -2010,7 +2012,6 @@
                             tableCards.push(new CardObj(cardID));
                         });
                         update = JSON.stringify(new GameAction("endQ", [usedCard], tableCards, null));
-                        hub.server.gameAction(roomCode, JSON.stringify(ga));
                     } else { //Someone could have the JC, so countdown is started
                         update = JSON.stringify(new GameAction("useQ", [usedCard], null, null));
                     }
