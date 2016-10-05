@@ -5,33 +5,60 @@
     playerName = "";
     playerInfo = null;
     ready = false;
+    decks = 1;
 
     $('#setName').prop('disabled', false);
     $('#name').prop('disabled', false);
     $('#go').text("READY");
     $('#go').prop('disabled', false);
 
+    //---------HELPERS----------------
+
+    setSize = function (selector, wid, hei) {
+        $(selector).css("width", wid);
+        $(selector).css("height", hei);
+    }
+    setPosition = function (selector, x, y) {
+        $(selector).css("left", x);
+        $(selector).css("top", y);
+    }
+
+    maprange = function (inVal, inMin, inMax, outMin, outMax) {
+        return Math.min(Math.max((inVal - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin), outMax);
+    }
+
     //-------- SIZING --------------
+
     width = 0;      //Total width, set on window sizing events
     height = 0;     //Total height
 
-    defaultMargin = 5;      //Default margin value to use in between elements
+    defaultMargin = 15;      //Default margin value to use in between elements
     minSideMargin = 20;     //Minimum margin on sides buffering the big buttons
     boxWidths = [          //Minimum and maximum widths:
-        60, 400,                // Standard button
-        60, 400,                // "SixJuice"
-        45, 300,                // "Room Code:"
-        45, 300,                // "<the room code>"
-        60, 400,                // Player list
-        45, 300                 // "Your Name:"
+        120, 400,                // Standard button
+        70, 815,                // "SixJuice" - max should be at least 2x button width + default margin
+        60, 200,                // "Room Code:"
+        120, 400,                // "<the room code>"
+        70, 400,                // Player list
+        60, 400,                // "Your Name:"
+        70, 1000,               // Message bar at bottom (no max)
+        60, 133,                 // Decks drop-down
+        40, 70,                 // "Decks"
+        60, 370,                // Your name text box
+        15, 80                  // Your name OK button
     ];
     boxHeights = [          //Minimum and maximum heights:
-        15, 100,                // "Enter Room Code:"
-        20, 160,                // "SixJuice"
-        15, 100,                // "Room Code:"
-        20, 160,                // "<the room code>"
+        30, 100,                // Standard button
+        30, 160,                // "SixJuice"
+        12, 40,                // "Room Code:"
+        30, 100,                // "<the room code>"
         30, 1000,               // Player list (no max)
-        15, 100                 // "Your Name:"
+        20, 40,                // "Your Name:"
+        30, 100,                // Message bar at bottom
+        20, 40,                // Decks drop-down
+        20, 40,                // "Decks"
+        30, 90,                 // Your name text box
+        30, 90                  // Your name OK button
     ];
     enums = [
         "Button", //If you change the enum order, always leave this one first
@@ -39,10 +66,21 @@
         "RoomCode",
         "RoomCodeValue",
         "PlayerList",
-        "YourName"
+        "YourName",
+        "Message",
+        "DecksDDL",
+        "Decks",
+        "NameBox",
+        "NameOK"
     ];
     calcedWidths = [];
     calcedHeights = [];
+    widthOf = function(name) {
+        return calcedWidths[enums.indexOf(name)];
+    }
+    heightOf = function(name) {
+        return calcedHeights[enums.indexOf(name)];
+    }
 
     isPortrait = true;
 
@@ -53,13 +91,13 @@
         calcedHeights = [];
 
         // Calculation of sizes
-        enums.forEach(function (index, value) {
+        enums.forEach(function (value, index) {
             wresult = 0;
             hresult = 0;
             switch (value) {
                 case "Button":
                     wresult = (wid - 2 * minSideMargin) / (isPortrait ? 1 : 2) - (isPortrait ? 0 : defaultMargin);
-                    hresult = hei / (isPortrait ? 5.0 : 3.0) - defaultMargin;
+                    hresult = hei / (isPortrait ? 6.0 : 4.0) - defaultMargin;
                     break;
                 case "SixJuice":
                     wresult = wid - 2 * minSideMargin;
@@ -67,30 +105,176 @@
                     break;
                 case "RoomCode":
                     wresult = calcedWidths[0] / 2;
-                    hresult = calcedHeights[0] * 0.7;
+                    hresult = calcedHeights[0] * 0.4;
                     break;
                 case "RoomCodeValue":
-                    wresult = calcedWidths[0] / 2;
-                    hresult = calcedHeights[0] * 1.1;
+                    wresult = calcedWidths[0];
+                    hresult = maprange(Math.min(wid, hei * 2), 200, 850, 35, 85)
                     break;
                 case "PlayerList":
                     wresult = calcedWidths[0];
-                    hresult = isPortrait ?
-                        hei - calcedHeights[0] * 4.5 - defaultMargin * 7 :
-                        hei - calcedHeights[0] * 1.1 - defaultMargin * 3;
+                    hresult = hei - (calcedHeights[0] * (isPortrait ? 3.6 : 0.7) + heightOf("RoomCodeValue") + defaultMargin * (isPortrait ? 5 : 2));
                     break;
                 case "YourName":
-                    wresult = calcedWidths[0] / 2;
+                    wresult = calcedWidths[0];
+                    hresult = calcedHeights[0] * 0.4;
+                    break;
+                case "Message":
+                    wresult = wid - 2 * minSideMargin;
                     hresult = calcedHeights[0] * 0.7;
                     break;
+                case "DecksDDL":
+                    wresult = calcedWidths[0] / 3;
+                    hresult = calcedHeights[0] * 0.4;
+                    break;
+                case "Decks":
+                    wresult = calcedWidths[0] / 2;
+                    hresult = calcedHeights[0] * 0.4;
+                    break;
+                case "NameBox":
+                    wresult = calcedWidths[0] * 0.8 - defaultMargin;
+                    hresult = calcedHeights[0] * 0.7;
+                    break;
+                case "NameOK":
+                    wresult = calcedWidths[0] * 0.2;
+                    hresult = calcedHeights[0] * 0.7;
+                    break;
+                default: break;
             }
-            calcedWidths.push(Math.min(Math.max(wresult, boxWidths[index * 2 + 1]), boxWidths[index * 2]));
-            calcedHeights.push(hresult);
+            calcedWidths.push(Math.max(Math.min(wresult, boxWidths[index * 2 + 1]), boxWidths[index * 2]));
+            calcedHeights.push(Math.max(Math.min(hresult, boxHeights[index * 2 + 1]), boxHeights[index * 2]));
         });
 
-        //Placing elements
+        //Placing elements and sizing text (text sizes are simply calibrated in testing)
+        x = (wid - widthOf("SixJuice")) / 2;
+        y = defaultMargin;
+        leftside = isPortrait ? (wid - widthOf("Button")) / 2 : x;
+        switch (screen) {
+            case "start":
+                setSize('#SixJuiceBox', widthOf("SixJuice"), heightOf("SixJuice"));
+                setPosition('#SixJuiceBox', x, y);
+                $('#SJBtext').css({ "font-size": maprange(Math.min(wid, hei * 2), 250, 700, 35, 85) });
+                $('#SixJuiceBox').css({ "transform": "translateY(" + (isPortrait ? 30 : -15) + "%)" });
 
+                x = leftside;
+
+                setSize("#EnterRCBox", widthOf("Button"), heightOf("Button"));
+                y += heightOf("SixJuice") + defaultMargin;
+                setPosition("#EnterRCBox", x, y);
+                $('#EnterRCBox').css({
+                    "font-size": maprange(Math.min(wid, hei * 2), 250, 700, 15, 35), "text-align": isPortrait ? "left" : "right",
+                    "transform": "translateY(" + (isPortrait ? 65 : 30) + "%)"
+                });
+
+                setSize("#roomCodeValue", widthOf("Button") - 34, heightOf("Button") - 2); // Offsets are for border/margin, which are treated differently in an input vs. a button
+                isPortrait ? y += heightOf("Button") + defaultMargin : x += widthOf("Button") + defaultMargin;
+                setPosition("#roomCodeValue", x, y);
+                $('#roomCodeValue').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 700, 25, 60) });
+
+                setSize("#joinButton", widthOf("Button"), heightOf("Button"));
+                y += heightOf("Button") + defaultMargin;
+                x = leftside;
+                setPosition("#joinButton", x, y);
+                $('#joinButton').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 650, 15, 40) });
+
+                setSize("#newButton", widthOf("Button"), heightOf("Button"));
+                isPortrait ? y += heightOf("Button") + defaultMargin : x += widthOf("Button") + defaultMargin;
+                setPosition("#newButton", x, y);
+                $('#newButton').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 650, 15, 40) });
+                $('#newButton').text(!isPortrait && wid < 350 ? "NEW" : "NEW GAME");
+
+                setSize("#startMessage", widthOf("Message"), heightOf("Message"));
+                y += heightOf("Button") + defaultMargin;
+                x = leftside;
+                setPosition("#startMessage", x, y);
+                $('#startMessage').css({ "font-size": Math.min(maprange(isPortrait ? wid : wid / 2, 200, 450, 15, 20), maprange(hei * (isPortrait ? 1 : 1.35), 400, 700, 15, 20)) });
+
+                break;
+            case "room":
+                x = leftside;
+                rightside = leftside + widthOf("Button") + defaultMargin;
+
+                setSize('#roomCodeBox', widthOf("RoomCode"), heightOf("RoomCode"));
+                setPosition('#roomCodeBox', x, y);
+                $('#roomCodeBox').css({
+                    "font-size": maprange((isPortrait ? 1.1 : 0.7) * Math.min(wid, hei * 2), 250, 800, 15, 35), "text-align": isPortrait ? "left" : "right",
+                    "transform": "translateY(" + (isPortrait ? 65 : 30) + "%)"
+                });
+
+                setSize('#roomRoomCode', widthOf("RoomCodeValue"), heightOf("RoomCodeValue"));
+                isPortrait ? y += heightOf("RoomCode") + defaultMargin : x += widthOf("RoomCode") + defaultMargin;
+                setPosition('#roomRoomCode', x, y);
+                $('#roomRoomCode').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 850, 35, 85) });
+
+                y += heightOf("RoomCodeValue") + defaultMargin;
+                landscapeYSave1 = y;
+
+                setSize('#decks', widthOf("DecksDDL"), heightOf("DecksDDL"));
+                x = isPortrait ? leftside : rightside;
+                setPosition('#decks', x, y);
+                $('#decks').css({
+                    "font-size": maprange(Math.min(isPortrait ? wid : wid / 2, hei), 250, 600, 15, 35)
+                });
+
+                setSize('#decksText', widthOf("Decks"), heightOf("Decks"));
+                x += widthOf("DecksDDL") + defaultMargin;
+                setPosition('#decksText', x, y);
+                $('#decksText').css({
+                    "font-size": Math.min(maprange(wid, 200, 450, 20, 45), maprange(hei, 300, 600, 18, 25)),
+                    "transform": "translateY(" + maprange(hei, 300, 700, 10, 20) + "%)"
+                });
+
+                setSize('#nameText', widthOf("YourName"), heightOf("YourName"));
+                x = isPortrait ? leftside : rightside;
+                y += heightOf("Decks"); //Note: no margin here
+                setPosition('#nameText', x, y);
+                $('#nameTextText').css({
+                    "font-size": Math.max(Math.min((Math.min(isPortrait ? wid : wid / 2, hei) - 250) * 2 / 45 + 15, 35), 15)
+                });
+
+                setSize('#name', widthOf("NameBox"), heightOf("NameBox") - 6);
+                y += heightOf("YourName"); //Note: no margin here
+                setPosition('#name', x, y);
+                $('#name').css({ "font-size": Math.min(maprange(wid, 200, 750, 15, 35), maprange(hei, 200, 450, 15, 35)) });
+
+                setSize('#setName', widthOf("NameOK"), heightOf("NameOK"));
+                x += widthOf("NameBox") + defaultMargin;
+                setPosition('#setName', x, y);
+                $('#setName').css({ "font-size": Math.min(maprange(isPortrait ? wid: wid /2, 200, 750, 15, 35), maprange(hei, 200, 500, 15, 35)) });
+
+                y += heightOf("NameOK") + defaultMargin;
+                landscapeYSave2 = y;
+
+                setSize('#roomPlayerList', widthOf("PlayerList"), heightOf("PlayerList"));
+                x = leftside;
+                y = isPortrait ? y : landscapeYSave1;
+                height = Math.min(maprange(isPortrait ? wid : wid / 2, 200, 450, 17, 27), maprange(hei, 230, 450, 17, 27));
+                setPosition('#roomPlayerList', x, y);
+                $('#roomPlayerList').css({ "font-size": height });
+                $('.rpl_outer').css({ "height": height / 2 + 1 });
+                $('#roomPlayerList > div').css({ "height": height });
+
+                setSize('#go', widthOf("Button"), heightOf("Button"));
+                x = isPortrait ? leftside : rightside;
+                y = isPortrait ? y + heightOf("PlayerList") + defaultMargin : landscapeYSave2;
+                setPosition('#go', x, y);
+                $('#go').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 650, 15, 40) });
+
+                setSize('#roomMessage', widthOf("Message"), heightOf("Message"));
+                x = leftside;
+                y += heightOf("Button") + defaultMargin;
+                setPosition('#roomMessage', x, y);
+                $('#roomMessage').css({ "font-size": Math.min(maprange(isPortrait ? wid : wid / 2, 200, 450, 15, 20), maprange(hei * (isPortrait ? 1 : 1.35), 400, 700, 15, 20)) });
+
+                break;
+            case "rejoin":
+
+                break;
+            default: break;
+        }
     }
+
+
     //----------- START ----------------
 
     $('#roomCodeValue').focus();
@@ -99,6 +283,7 @@
     hub.client.goToRoomAs = function (destRoomCode, initPlayerName) {
         screen = "room";
         $('#startPane').addClass("hiddenPane");
+        resize(window.innerWidth, window.innerHeight);
         $('#roomPane').removeClass("hiddenPane");
         message("Joining room...", false);
 
@@ -152,10 +337,20 @@
         playerInfo = JSON.parse(players);
         $('#roomPlayerList').empty();
         for (i = 0; i < playerInfo.length; i++) {
-            $('#roomPlayerList').append('<div class="smallText">'.concat(playerInfo[i].playerName,
-                (playerInfo[i].ready ? " - READY" : ""), '</div>'));
+            $('#roomPlayerList').append('<div><div class="rpl_outer"><span class="rpl_inner">' + playerInfo[i].playerName + '<span class="readyMarker' +
+                (playerInfo[i].ready ? 'Y rpl_inner">&#x2713;' : 'N rpl_inner">X') + '</span></span></div></div>');
         }
+        setDecksDDLEnablement(!ready);
+        resize(window.innerWidth, window.innerHeight);
         message("", false);
+    }
+
+    setDecksDDLEnablement = function (enable) {
+        if (!enable || playerInfo[0].playerName != playerName) {
+            $('#decks').prop('disabled', true);
+        } else {
+            $('#decks').prop('disabled', false);
+        }
     }
 
     //Callback for validation of name change
@@ -167,6 +362,17 @@
         }
     }
 
+    //Called on selecting a value from the Decks DDL
+    updateDeckCount = function () {
+        decks = parseInt($('#decks').val());
+        hub.server.updateDeckCount(roomCode, decks);
+    }
+    hub.client.sendUpdatedDeckCount = function (newCount) {
+        if (playerInfo != null && playerInfo[0].playerName != playerName) {
+            $('#decks').val(newCount);
+        }
+    }
+
     //Called on pushing READY - changes page element states and informs server
     imReady = function () {
         hub.server.playerReady(roomCode, playerName, true);
@@ -174,6 +380,7 @@
         $('#setName').prop('disabled', true);
         $('#name').prop('disabled', true);
         $('#go').text("NOT READY");
+        setDecksDDLEnablement(false);
     }
     //Called on pushing NOT READY - changes page element states back and informs
     //server
@@ -183,6 +390,7 @@
         $('#setName').prop('disabled', false);
         $('#name').prop('disabled', false);
         $('#go').text("READY");
+        setDecksDDLEnablement(true);
     }
 
     //Called when game starts - disables not ready button and shows message
@@ -324,10 +532,24 @@
             }
         });
 
+        $('#decks').change(function () {
+            if (playerInfo != null && playerInfo[0].playerName == playerName) {
+                updateDeckCount();
+            }
+        });
+
         $('#rejoinPlayerList').on('click', '.rejoinButton', function () {
             window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', $(this).text());
         });
 
         $(".SJBody").show();
+    });
+
+    $(document).ready(function () {
+        resize(window.innerWidth, window.innerHeight);
+
+        $(window).resize(function () {
+            resize(window.innerWidth, window.innerHeight);
+        })
     });
 });

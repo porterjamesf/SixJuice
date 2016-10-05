@@ -113,6 +113,7 @@ namespace SixJuice
 
                 await Groups.Add(Context.ConnectionId, roomCode);
                 Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
+                Clients.Caller.sendUpdatedDeckCount(await _db.GetDeckCount(roomCode));
             } catch (MongoDBHelper.NoSuchGameException)
             {
                 Clients.Caller.cancelJoinRoom();
@@ -131,6 +132,13 @@ namespace SixJuice
                 await _db.ChangePlayerName(Context.ConnectionId, newName);
                 Clients.Group(roomCode).sendPlayerList(JsonConvert.SerializeObject(await _db.GetPlayerList(roomCode)));
             }
+        }
+
+        //From Room
+        public async Task UpdateDeckCount(string roomCode, int deckCount)
+        {
+            await _db.UpdateDeckCount(roomCode, deckCount);
+            Clients.Group(roomCode).sendUpdatedDeckCount(deckCount);
         }
 
         //From Room - In addition to setting player ready status and notifying group,

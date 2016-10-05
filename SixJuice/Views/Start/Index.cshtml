@@ -4,7 +4,13 @@
 }
 
 <div id="startPane" class="wide tall">
-    <div class="vert10 wide"></div>
+    <div id="SixJuiceBox"><span id="SJBtext">SixJuice</span></div>
+    <div id="EnterRCBox">Enter Room Code:</div>
+    <input id="roomCodeValue" type="text" value="@ViewBag.InitRoomCode" />
+    <button id="joinButton" disabled="">JOIN</button>
+    <button id="newButton">NEW GAME</button>
+    <span id="startMessage"></span>
+    @*<div class="vert10 wide"></div>
     <div class="titleBox wide vert20 bigText">
         SixJuice
     </div>
@@ -34,10 +40,28 @@
             <span class="sidepad"></span>
             <span id="startMessage" class="tall sidepadsandwich smallText"></span>
         </div>
-    </div>
+    </div>*@
 </div>
 <div id="roomPane" class="wide tall hiddenPane">
-    <div class="vert10"></div>
+    <div id="roomCodeBox">Room code:</div>
+    <div id="roomRoomCode"></div>
+    <select id="decks">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+    </select>
+    <div id="decksText">Decks</div>
+    <div id="nameText"><span id="nameTextText">Enter Your Name:</span></div>
+    <input type="text" id="name" />
+    <button id="setName">OK</button>
+    <div id="roomPlayerList">
+        <div><div class="rpl_outer"><span class="rpl_inner">Player1<span class="readyMarkerN rpl_inner">X</span></span></div></div>
+        <div><div class="rpl_outer"><span class="rpl_inner">Player2<span class="readyMarkerY rpl_inner">&#x2713;</span></span></div></div>
+    </div>
+    <button id="go">READY</button>
+    <div id="roomMessage"></div>
+
+    @*<div class="vert10"></div>
     <div class="wide vert10">
         <span class="sidepad"></span>
         <span class="medText">Room code:</span>
@@ -62,7 +86,7 @@
     <div class="vert10">
         <span class="sidepad"></span>
         <span id="roomMessage" class="tall sidepadsandwich smallText"></span>
-    </div>
+    </div>*@
 </div>
 <div id="rejoinPane" class="wide tall hiddenPane">
     <div class="vert10"></div>

@@ -397,3 +397,55 @@ button {
     position: relative;
     overflow: hidden;
 }
+
+#startPane > * {
+    position: absolute;
+}
+#roomPane > * {
+    position: absolute;
+}
+
+#SixJuiceBox {
+    text-align: center;
+}
+
+#roomCodeValue {
+    border: 1px solid black;
+    border-radius: 3px;
+    padding: 1px 16px;
+}
+
+#nameTextText {
+    position: absolute;
+    bottom: 0px;
+}
+
+#setName {
+    overflow: hidden;
+}
+
+.readyMarkerN {
+    float: right;
+    color: #AA0000;
+}
+
+.readyMarkerY {
+    float: right;
+    color: #00AA00;
+}
+
+.rpl_outer {
+    border-bottom: 1px solid lightgrey;
+}
+
+.rpl_inner {
+    background-color: #f8f8f8;
+}
+
+#roomPlayerList > div {
+    clear: both;
+}
+
+#roomMessage {
+    font-size: 20px;
+}

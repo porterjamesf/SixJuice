@@ -16,7 +16,8 @@ namespace SixJuice.Database
         Task AddPlayer(string roomCode, string playerName);
         Task RemovePlayer(string roomCode, string playerName);
 		Task UpdateDeckCount(string roomCode, int deckCount);
-		Task<List<PlayerViewModel>> GetPlayerList(string roomCode);
+        Task<int> GetDeckCount(string roomCode);
+        Task<List<PlayerViewModel>> GetPlayerList(string roomCode);
         Task<List<PlayerViewModel>> PlayerReady(string roomCode, string playerName, bool isReady);
         Task SaveGame(string roomCode, Game game);
 

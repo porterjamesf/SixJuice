@@ -153,7 +153,13 @@ namespace SixJuice.Database
 		{
 			var update = Builders<Game>.Update.Set("DeckCount", deckCount);
 			await games.UpdateOneAsync(getFilter(roomCode), update);
-		}
+        }
+
+        public async Task<int> GetDeckCount(string roomCode)
+        {
+            Game game = await GetGame(roomCode);
+            return game.DeckCount;
+        }
 
         public async Task<List<PlayerViewModel>> GetPlayerList(string roomCode)
         {
