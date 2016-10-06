@@ -13,9 +13,7 @@ namespace SixJuice.Database
     {
         public IMongoDatabase _db;
 
-        public TimeSpan expirePeriod = TimeSpan.FromHours(2);
-        //NOTE: if you change the expire time, make sure to drop the old index from the existing database manually using db.games.dropIndex("DateCreated_-1")
-        // The new index will be created automatically, but only if no index exists on that field
+        public TimeSpan expirePeriod = TimeSpan.FromHours(2); // How long a game persists in the database after all players leave (if it's still going)
 
         public IMongoCollection<Game> games
         {
@@ -46,6 +44,7 @@ namespace SixJuice.Database
                 });
             }
         }
+
 
         // Helper for game finding filter
         private FilterDefinition<Game> getFilter(string roomCode)

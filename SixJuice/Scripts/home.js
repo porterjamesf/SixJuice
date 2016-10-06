@@ -35,30 +35,32 @@
     defaultMargin = 15;      //Default margin value to use in between elements
     minSideMargin = 20;     //Minimum margin on sides buffering the big buttons
     boxWidths = [          //Minimum and maximum widths:
-        120, 400,                // Standard button
+        120, 400,               // Standard button
         70, 815,                // "SixJuice" - max should be at least 2x button width + default margin
         60, 200,                // "Room Code:"
-        120, 400,                // "<the room code>"
+        120, 400,               // "<the room code>"
         70, 400,                // Player list
         60, 400,                // "Your Name:"
         70, 1000,               // Message bar at bottom (no max)
-        60, 133,                 // Decks drop-down
+        60, 133,                // Decks drop-down
         40, 70,                 // "Decks"
         60, 370,                // Your name text box
-        15, 80                  // Your name OK button
+        15, 80,                 // Your name OK button
+        120, 815                // Rejoin list
     ];
     boxHeights = [          //Minimum and maximum heights:
-        30, 100,                // Standard button
-        30, 160,                // "SixJuice"
+        30, 100,               // Standard button
+        30, 160,               // "SixJuice"
         12, 40,                // "Room Code:"
-        30, 100,                // "<the room code>"
-        30, 1000,               // Player list (no max)
+        30, 100,               // "<the room code>"
+        30, 1000,              // Player list (no max)
         20, 40,                // "Your Name:"
-        30, 100,                // Message bar at bottom
+        30, 100,               // Message bar at bottom
         20, 40,                // Decks drop-down
         20, 40,                // "Decks"
-        30, 90,                 // Your name text box
-        30, 90                  // Your name OK button
+        30, 90,                // Your name text box
+        30, 90,                // Your name OK button
+        60, 1000               // Rejoin list (no max)
     ];
     enums = [
         "Button", //If you change the enum order, always leave this one first
@@ -71,7 +73,8 @@
         "DecksDDL",
         "Decks",
         "NameBox",
-        "NameOK"
+        "NameOK",
+        "RejoinList"
     ];
     calcedWidths = [];
     calcedHeights = [];
@@ -139,6 +142,9 @@
                     wresult = calcedWidths[0] * 0.2;
                     hresult = calcedHeights[0] * 0.7;
                     break;
+                case "RejoinList":
+                    wresult = calcedWidths[0] + (isPortrait ? 0 : calcedWidths[0] + defaultMargin);
+                    hresult = hei - (isPortrait ? heightOf("RoomCode") : 0) - heightOf("RoomCodeValue") - heightOf("Message") - defaultMargin * 4;
                 default: break;
             }
             calcedWidths.push(Math.max(Math.min(wresult, boxWidths[index * 2 + 1]), boxWidths[index * 2]));
@@ -268,7 +274,39 @@
 
                 break;
             case "rejoin":
+                x = leftside;
+                rightside = leftside + widthOf("Button") + defaultMargin;
 
+                setSize('#rejoinCodeBox', widthOf("RoomCode"), heightOf("RoomCode"));
+                setPosition('#rejoinCodeBox', x, y);
+                $('#rejoinCodeBox').css({
+                    "font-size": maprange((isPortrait ? 1.1 : 0.7) * Math.min(wid, hei * 2), 250, 800, 15, 35), "text-align": isPortrait ? "left" : "right",
+                    "transform": "translateY(" + (isPortrait ? 65 : 30) + "%)"
+                });
+
+                setSize('#rejoinRoomCode', widthOf("RoomCodeValue"), heightOf("RoomCodeValue"));
+                isPortrait ? y += heightOf("RoomCode") + defaultMargin : x += widthOf("RoomCode") + defaultMargin;
+                setPosition('#rejoinRoomCode', x, y);
+                $('#rejoinRoomCode').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 850, 35, 85) });
+
+                setSize('#rejoinPlayerList', widthOf("RejoinList"), heightOf("RejoinList"));
+                x = leftside;
+                y += heightOf("RoomCodeValue") + defaultMargin;
+                setPosition('#rejoinPlayerList', x, y);
+
+                adjustedButtonWidth = ($('#rejoinPlayerList').prop("clientWidth") - (isPortrait ? 0 : defaultMargin)) / (isPortrait ? 1 : 2);
+
+                setSize('#rejoinPlayerList > button', adjustedButtonWidth, heightOf("Button"));
+                $('#rejoinPlayerList > button').each(function (index, button) {
+                    $(button).css({ "left": isPortrait ? 0 : (index % 2) * (adjustedButtonWidth + defaultMargin) });
+                    $(button).css({ "top": (heightOf("Button") + defaultMargin) * (isPortrait ? index : Math.floor(index / 2)) });
+                });
+                $('#rejoinPlayerList > button').css({ "font-size": maprange(Math.min(wid, hei * 2), 200, 650, 15, 40) });
+
+                setSize('#rejoinMessage', widthOf("Message"), heightOf("Message"));
+                y += heightOf("RejoinList") + defaultMargin;
+                setPosition('#rejoinMessage', x, y);
+                $('#rejoinMessage').css({ "font-size": Math.min(maprange(isPortrait ? wid : wid / 2, 200, 450, 15, 20), maprange(hei * (isPortrait ? 1 : 1.35), 400, 700, 15, 20)) });
                 break;
             default: break;
         }
@@ -308,6 +346,7 @@
         screen = "rejoin";
         $('#startPane').addClass("hiddenPane");
         $('#rejoinPane').removeClass("hiddenPane");
+        resize(window.innerWidth, window.innerHeight);
 
         roomCode = destRoomCode;
         playerName = "";
@@ -415,7 +454,7 @@
         for (i = 0; i < playerInfo.length; i++) {
             if (!playerInfo[i].ready) {
                 notReadyCount++;
-                $('#rejoinPlayerList').append('<div><span class="sidepad"></span><button class="medText sidepadsandwich rejoinButton">'.concat(playerInfo[i].playerName, '</button></div>'));
+                $('#rejoinPlayerList').append('<button>' + playerInfo[i].playerName + '</button>');
                 lastNotReadyName = playerInfo[i].playerName;
             }
         }
@@ -423,9 +462,9 @@
             window.location.href = getBaseURL().concat('/Start/?roomCode=', roomCode, '&message=This game is full.');
         }
         if (notReadyCount == 1) {
-            //hub.server.createConnectedPlayer(lastNotReadyName, roomCode);
             window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', lastNotReadyName);
         }
+        resize(window.innerWidth, window.innerHeight);
     }
 
     //----------- SHARED ---------------
@@ -462,10 +501,14 @@
 
     //Writes message to bottom of page
     message = function (text, isError) {
-        messageDest = "#roomMessage";
-        if (screen == "start") {
-            messageDest = "#startMessage";
-        }
+        messageDest = "#" + screen + "Message";
+        //messageDest = "#roomMessage";
+        //if (screen == "start") {
+        //    messageDest = "#startMessage";
+        //}
+        //if (screen == "rejoin") {
+        //    messageDest = "#rejoinMessage";
+        //}
         if (isError) {
             $(messageDest).addClass("errorText");
         } else {
@@ -538,7 +581,7 @@
             }
         });
 
-        $('#rejoinPlayerList').on('click', '.rejoinButton', function () {
+        $('#rejoinPlayerList').on('click', 'button', function () {
             window.location.href = getBaseURL().concat('/Game/?roomCode=', roomCode, '&playerName=', $(this).text());
         });
 

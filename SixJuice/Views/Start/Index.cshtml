@@ -10,37 +10,7 @@
     <button id="joinButton" disabled="">JOIN</button>
     <button id="newButton">NEW GAME</button>
     <span id="startMessage"></span>
-    @*<div class="vert10 wide"></div>
-    <div class="titleBox wide vert20 bigText">
-        SixJuice
-    </div>
-    <div class="vert5">
-        <span class="sidepad"></span>
-        <span class="smallText" id="roomCodeLabel">Enter room code:</span>
-    </div>
-    <div class="vert10">
-        <span class="sidepad"></span>
-        <span class="tall">
-            <input id="roomCodeValue" type="text" class="sidepadsandwich medText tall" value="@ViewBag.InitRoomCode" />
-        </span>
-    </div>
-    <div class="vert50">
-        <div class="vert10"></div>
-        <div class="vert20">
-            <span class="sidepad"></span>
-            <button id="joinButton" class="tall sidepadsandwich medText" disabled="">JOIN</button>
-        </div>
-        <div class="vert10"></div>
-        <div class="vert20">
-            <span class="sidepad"></span>
-            <button id="newButton" class="tall sidepadsandwich medText">NEW GAME</button>
-        </div>
-        <div class="vert10"></div>
-        <div class="vert20">
-            <span class="sidepad"></span>
-            <span id="startMessage" class="tall sidepadsandwich smallText"></span>
-        </div>
-    </div>*@
+    
 </div>
 <div id="roomPane" class="wide tall hiddenPane">
     <div id="roomCodeBox">Room code:</div>
@@ -55,52 +25,18 @@
     <input type="text" id="name" />
     <button id="setName">OK</button>
     <div id="roomPlayerList">
-        <div><div class="rpl_outer"><span class="rpl_inner">Player1<span class="readyMarkerN rpl_inner">X</span></span></div></div>
-        <div><div class="rpl_outer"><span class="rpl_inner">Player2<span class="readyMarkerY rpl_inner">&#x2713;</span></span></div></div>
+        
     </div>
     <button id="go">READY</button>
     <div id="roomMessage"></div>
-
-    @*<div class="vert10"></div>
-    <div class="wide vert10">
-        <span class="sidepad"></span>
-        <span class="medText">Room code:</span>
-    </div>
-    <div class="wide vert20">
-        <span class="sidepad"></span>
-        <span class="bigText" id="roomRoomCode"></span>
-    </div>
-    <div class="vert5">
-        <span class="sidepad"></span>
-        <span><input type="text" id="name" /></span>
-        <span><button id="setName">OK</button></span>
-    </div>
-    <div class="wide vert30">
-        <span class="sidepad"></span>
-        <span id="roomPlayerList" class="sidepadsandwich tall" style="display: inline-block"></span>
-    </div>
-    <div class="buttonContainer vert10">
-        <span class="sidepad"></span>
-        <button id="go" class="tall sidepadsandwich medText">READY</button>
-    </div>
-    <div class="vert10">
-        <span class="sidepad"></span>
-        <span id="roomMessage" class="tall sidepadsandwich smallText"></span>
-    </div>*@
 </div>
 <div id="rejoinPane" class="wide tall hiddenPane">
-    <div class="vert10"></div>
-    <div class="wide vert10">
-        <span class="sidepad"></span>
-        <span class="medText">Room code:</span>
+    <div id="rejoinCodeBox">Room code:</div>
+    <div id="rejoinRoomCode"></div>
+    <div id="rejoinPlayerList">
+        
     </div>
-    <div class="wide vert20">
-        <span class="sidepad"></span>
-        <span class="bigText" id="rejoinRoomCode"></span>
-    </div>
-    <div class="vert5"></div>
-    <div class="vert60" id="rejoinPlayerList">
-    </div>
+    <div id="rejoinMessage"></div>
 </div>
 
 <script src="~/Scripts/home.js"></script>

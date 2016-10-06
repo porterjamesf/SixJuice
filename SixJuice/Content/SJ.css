@@ -404,6 +404,20 @@ button {
 #roomPane > * {
     position: absolute;
 }
+#rejoinPane > * {
+    position: absolute;
+}
+#rejoinPlayerList > * {
+    position: absolute;
+}
+#rejoinPlayerList {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+#roomPlayerList {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
 
 #SixJuiceBox {
     text-align: center;
