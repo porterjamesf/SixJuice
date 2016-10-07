@@ -20,13 +20,31 @@
         </button>
     </div>
     <div class="SJMenu">
-        <div class="vert10 medText menuTitle">SixJuice</div>
+        <div id="menuTitle" class="menuButtonSize">SixJuice</div>
+        <div id="menuMain" class="menuPane">
+            <button id="home" class="menuButtonSize">BACK TO HOME</button>
+            <button id="menuRules" class="menuButtonSize">RULES</button>
+            <button id="menuAbout" class="menuButtonSize">ABOUT</button>
+        </div>
+        <div id="menuRulesPane" class="menuPane hiddenPane">
+            <button class="menuBack menuButtonSize">BACK</button>
+            <div class="para">
+                <p>Here is a paragraph explaining the rules of SixJuice.</p>
+            </div>
+        </div>
+        <div id="menuAboutPane" class="menuPane hiddenPane">
+            <button class="menuBack menuButtonSize">BACK</button>
+            <div class="para">
+                <p>Read all about stuff, and junk.</p>
+            </div>
+        </div>
+        @*<div class="vert10 medText menuTitle">SixJuice</div>
         <span class="sidepad"></span>
         <button class="menuItem sidepadsandwich smallText" id="home">Home</button>
         <span class="sidepad"></span>
         <button class="menuItem sidepadsandwich smallText" id="rules">Rules</button>
         <span class="sidepad"></span>
-        <button class="menuItem sidepadsandwich smallText" id="about">About</button>
+        <button class="menuItem sidepadsandwich smallText" id="about">About</button>*@
     </div>
 
     <script src="Scripts/jquery-1.10.2.min.js"></script>
@@ -35,8 +53,31 @@
 
     <script type="text/javascript">
         $(function () {
+            // Menu history item class - node of linked list for internal menu memory stack
+            function menuHistoryItem(subname, text, backItem) {
+                this.sub = subname;
+                this.title = text;
+                this.back = backItem;
+
+                this.getHistoryObject = function() {
+                    return { screen: "menu", sub: this.sub, title: this.title };
+                }
+
+                this.pushThisState = function() {
+                    history.pushState(this.getHistoryObject(), this.title, window.location);
+                }
+            }
+
+            // Use for going to a new menu screen - adds it to history (internal & browser) and loads screen
+            addAndGoToMenu = function (subname, text, pushToBrowser) {
+                current = new menuHistoryItem(subname, text, current);
+                if (pushToBrowser) { current.pushThisState(); }
+                goToMenu(current.sub);
+            }
+
+            // Reference to top of internal menu memory stack (as linked list). This seed item always stays at end (bottom).
+            current = new menuHistoryItem("main", "Menu - Main", null);
             menuOpen = false;
-            closingMenu = false; //Used for removing menu history stack 
 
             openMenu = function () {
                 if (!menuOpen) {
@@ -54,40 +95,52 @@
                     $('.SJIcon-bar').removeClass("SJIcon-barHighlight");
                 }
             }
+
             $('.SJNavButton').click(function () {
                 if (!menuOpen) {
-                    history.pushState({ screen: "menu", sub: "main" }, "Main menu", window.location);
+                    current.pushThisState();
                     openMenu();
                 } else {
-                    closingMenu = true;
-                    window.history.back(); //will trigger a popstate event, see below
+                    pushCurrentState();
+                    closeMenu();
                 }
             });
+
             $('#home').click(function () {
-                console.log("home");
-                history.pushState({ screen: "menu", sub: "home" }, "Menu - Home", window.location);
-            });
-            $('#rules').click(function () {
-                console.log("rules");
-            });
-            $('#about').click(function () {
-                console.log("about");
+                window.location.href = getBaseURL(); // Reloads start page
             });
 
+            $('#menuRules').click(function () {
+                addAndGoToMenu("rules", "Menu - Rules", true);
+            });
+
+            $('#menuAbout').click(function () {
+                addAndGoToMenu("about", "Menu - About", true);
+            });
+
+            $('.menuBack').click(function () {
+                window.history.back();
+            })
+
+            // Fired on browser back/forward navigation
+            //  Here, history states are intercepted if they are for menu navigation. Other screen history items are passed along to home.js or game.js
+            //  If history state is a menu state, the menu is brought up. Otherwise, it is closed. If history state is a menu state and the menu is already
+            //  up, the state is used to navigate to the right menu. An internal menu history state is maintained for the purpose of returning to the same
+            //  point when switching back and forth from the menu. Internal history is simply a linked list, containing only the 'back' history ('forward'
+            //  items are just added when needed);
             window.addEventListener('popstate', function (e) {
                 if (e.state != null && e.state.screen == "menu") {
-                    if (closingMenu) { //Closing whole menu; will continue to go back through history until the state
-                        window.history.back(); // popped is not a menu state, thus clearing the menu history stack
+                    if (menuOpen) {
+                        if (current.back != null && current.back.sub == e.state.sub) { // Popped state matches internal previous menu state: this is a 'back'
+                            current = current.back;
+                            goToMenu(e.state.sub);
+                        } else { // Popped state isn't previous menu state: this is a 'forward'
+                            addAndGoToMenu(e.state.sub, e.state.title, false);
+                        }
                     } else {
-                        if (e.state.sub == "main") {
-                            console.log("back to main");
-                        }
-                        if (e.state.sub == "home") {
-                            console.log("at home");
-                        }
+                        openMenu();
                     }
                 } else {
-                    closingMenu = false; //End of menu closing history stack clearing
                     if (menuOpen) {
                         closeMenu();
                     } else {
@@ -96,11 +149,78 @@
                 }
             });
 
+            //Shows/hides the given menu contents
+            goToMenu = function (subName) {
+                $('.menuPane').addClass('hiddenPane');
+                switch (subName) {
+                    case "main":
+                        $('#menuMain').removeClass('hiddenPane');
+                        break;
+                    case "rules":
+                        $('#menuRulesPane').removeClass('hiddenPane');
+                        break;
+                    case "about":
+                        $('#menuAboutPane').removeClass('hiddenPane');
+                        break;
+                    default: break;
+                }
+            }
+
+            //---------HELPERS----------------
+
+            setSize = function (selector, wid, hei) {
+                $(selector).css("width", wid);
+                $(selector).css("height", hei);
+            }
+            setPosition = function (selector, x, y) {
+                $(selector).css("left", x);
+                $(selector).css("top", y);
+            }
+
+            maprange = function (inVal, inMin, inMax, outMin, outMax) {
+                return Math.min(Math.max((inVal - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin), outMax);
+            }
+
+            //----------RESIZING--------------
+            // Parameters
+            buttonMinW = 100;
+            buttonMaxW = 500;
+            buttonMinH = 30;
+            buttonMaxH = 90;
+            paraMinW = 120;
+            paraMaxW = 700;
+            menuMargin = 15;
+
             resizeBody = function (width, height) {
                 $('body').css("width", width - 1);
                 $('body').css("height", height - 1);
                 $('.SJBody').css("width", width - 1);
                 $('.SJBody').css("height", height - 1);
+
+                buttonWidth = maprange(width, 150, 675, buttonMinW, buttonMaxW);
+                buttonHeight = maprange(height, 200, 500, buttonMinH, buttonMaxH);
+                paraWidth = maprange(width, 150, 800, paraMinW, paraMaxW);
+                setSize('.menuButtonSize', buttonWidth, buttonHeight);
+                setSize('.menuPane', paraWidth, height - buttonHeight - menuMargin * 3);
+                $('.SJMenu > div > .para').css({ "width": paraWidth });
+
+                leftside = (width - paraWidth) / 2;
+                setPosition('#menuTitle', leftside, menuMargin);
+                setPosition('.menuPane', leftside, menuMargin * 2 + buttonHeight);
+
+                buttonLeftSide = (paraWidth - buttonWidth) / 2;
+                setPosition('.menuBack', buttonLeftSide, 0);
+                setPosition('#home', buttonLeftSide, 0);
+                setPosition('#menuRules', buttonLeftSide, buttonHeight + menuMargin);
+                setPosition('#menuAbout', buttonLeftSide, 2 * (buttonHeight + menuMargin));
+                setPosition('.para', 0, buttonHeight + menuMargin);
+
+                $('#menuTitle').css({ "font-size": Math.min(maprange(width, 150, 500, 20, 50), maprange(height, 200, 500, 20, 50)) });
+                $('.menuBack').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
+                $('#home').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
+                $('#menuRules').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
+                $('#menuAbout').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
+                $('#home').text(width < 200 && height < 250 ? "HOME" : "BACK TO HOME");
             }
 
             $(document).ready(function () {

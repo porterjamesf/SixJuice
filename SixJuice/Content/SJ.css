@@ -463,3 +463,19 @@ button {
 #roomMessage {
     font-size: 20px;
 }
+
+.para > * {
+    position: relative;
+}
+
+#menuTitle {
+    position: absolute;
+}
+
+.menuPane {
+    position: absolute;
+}
+
+.menuPane > * {
+    position: absolute;
+}

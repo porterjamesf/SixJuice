@@ -94,14 +94,14 @@
     getCardHole = function () {
         return '<div class="emptyCard"/>';
     }
-    setSize = function (selector, wid, hei) {
-        $(selector).css("width", wid);
-        $(selector).css("height", hei);
-    }
-    setPosition = function (selector, x, y) {
-        $(selector).css("left", x);
-        $(selector).css("top", y);
-    }
+    //setSize = function (selector, wid, hei) {
+    //    $(selector).css("width", wid);
+    //    $(selector).css("height", hei);
+    //}
+    //setPosition = function (selector, x, y) {
+    //    $(selector).css("left", x);
+    //    $(selector).css("top", y);
+    //}
 
     //Converts a 1 digit number to 2 digit form with a leading 0, and leaves
     // a 2 digit number as it is. Untested with other sized numbers.

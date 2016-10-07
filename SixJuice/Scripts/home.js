@@ -14,18 +14,18 @@
 
     //---------HELPERS----------------
 
-    setSize = function (selector, wid, hei) {
-        $(selector).css("width", wid);
-        $(selector).css("height", hei);
-    }
-    setPosition = function (selector, x, y) {
-        $(selector).css("left", x);
-        $(selector).css("top", y);
-    }
+    //setSize = function (selector, wid, hei) {
+    //    $(selector).css("width", wid);
+    //    $(selector).css("height", hei);
+    //}
+    //setPosition = function (selector, x, y) {
+    //    $(selector).css("left", x);
+    //    $(selector).css("top", y);
+    //}
 
-    maprange = function (inVal, inMin, inMax, outMin, outMax) {
-        return Math.min(Math.max((inVal - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin), outMax);
-    }
+    //maprange = function (inVal, inMin, inMax, outMin, outMax) {
+    //    return Math.min(Math.max((inVal - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin), outMax);
+    //}
 
     //-------- SIZING --------------
 
@@ -563,8 +563,13 @@
         });
 
         $('#setName').click(function () {
-            message("Changing name...", false);
-            hub.server.changeName(roomCode, $('#name').val());
+            newname = $('#name').val();
+            if (newname == 'ok' || newname == '&') {
+                message('Name cannot be "' + newname + '"', true);
+            } else {
+                message("Changing name...", false);
+                hub.server.changeName(roomCode, $('#name').val());
+            }
         });
 
         $('#go').click(function () {
