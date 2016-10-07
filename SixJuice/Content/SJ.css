@@ -479,3 +479,7 @@ button {
 .menuPane > * {
     position: absolute;
 }
+
+.para {
+    overflow-y: auto;
+}

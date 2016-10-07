@@ -29,7 +29,7 @@
         <div id="menuRulesPane" class="menuPane hiddenPane">
             <button class="menuBack menuButtonSize">BACK</button>
             <div class="para">
-                <p>Here is a paragraph explaining the rules of SixJuice.</p>
+                <p>Rules written out here.</p>
             </div>
         </div>
         <div id="menuAboutPane" class="menuPane hiddenPane">
@@ -54,29 +54,35 @@
     <script type="text/javascript">
         $(function () {
             // Menu history item class - node of linked list for internal menu memory stack
-            function menuHistoryItem(subname, text, backItem) {
-                this.sub = subname;
-                this.title = text;
-                this.back = backItem;
+            //function menuHistoryItem(subname, text, backItem) {
+            //    this.sub = subname;
+            //    this.title = text;
+            //    this.back = backItem;
 
-                this.getHistoryObject = function() {
-                    return { screen: "menu", sub: this.sub, title: this.title };
-                }
+            //    this.getHistoryObject = function() {
+            //        return { screen: "menu", sub: this.sub, title: this.title };
+            //    }
 
-                this.pushThisState = function() {
-                    history.pushState(this.getHistoryObject(), this.title, window.location);
-                }
-            }
+            //    this.pushThisState = function() {
+            //        history.pushState(this.getHistoryObject(), this.title, window.location);
+            //    }
+            //}
 
             // Use for going to a new menu screen - adds it to history (internal & browser) and loads screen
-            addAndGoToMenu = function (subname, text, pushToBrowser) {
-                current = new menuHistoryItem(subname, text, current);
-                if (pushToBrowser) { current.pushThisState(); }
+            //addAndGoToMenu = function (subname, text, pushToBrowser) {
+            //    current = new menuHistoryItem(subname, text, current);
+            //    if (pushToBrowser) { current.pushThisState(); }
+            //    goToMenu(current.sub);
+            //}
+            addAndGoToMenu = function (subname, text) {
+                current = { sub: subname, title: text };
+                history.pushState({ screen: "menu", sub: current.sub, title: current.title }, current.title, window.location);
                 goToMenu(current.sub);
             }
 
             // Reference to top of internal menu memory stack (as linked list). This seed item always stays at end (bottom).
-            current = new menuHistoryItem("main", "Menu - Main", null);
+            //current = new menuHistoryItem("main", "Menu - Main", null);
+            current = { sub: "main", title: "Main menu" };
             menuOpen = false;
 
             openMenu = function () {
@@ -98,7 +104,8 @@
 
             $('.SJNavButton').click(function () {
                 if (!menuOpen) {
-                    current.pushThisState();
+                    //current.pushThisState();
+                    history.pushState({ screen: "menu", sub: current.sub, title: current.title}, current.title, window.location);
                     openMenu();
                 } else {
                     pushCurrentState();
@@ -111,11 +118,11 @@
             });
 
             $('#menuRules').click(function () {
-                addAndGoToMenu("rules", "Menu - Rules", true);
+                addAndGoToMenu("rules", "Menu - Rules");
             });
 
             $('#menuAbout').click(function () {
-                addAndGoToMenu("about", "Menu - About", true);
+                addAndGoToMenu("about", "Menu - About");
             });
 
             $('.menuBack').click(function () {
@@ -130,16 +137,21 @@
             //  items are just added when needed);
             window.addEventListener('popstate', function (e) {
                 if (e.state != null && e.state.screen == "menu") {
-                    if (menuOpen) {
-                        if (current.back != null && current.back.sub == e.state.sub) { // Popped state matches internal previous menu state: this is a 'back'
-                            current = current.back;
-                            goToMenu(e.state.sub);
-                        } else { // Popped state isn't previous menu state: this is a 'forward'
-                            addAndGoToMenu(e.state.sub, e.state.title, false);
-                        }
-                    } else {
+                    if (!menuOpen) {
                         openMenu();
                     }
+                    goToMenu(e.state.sub, e.state.title);
+
+                    //if (menuOpen) {
+                    //    if (current.back != null && current.back.sub == e.state.sub) { // Popped state matches internal previous menu state: this is a 'back'
+                    //        current = current.back;
+                    //        goToMenu(e.state.sub);
+                    //    } else { // Popped state isn't previous menu state: this is a 'forward'
+                    //        addAndGoToMenu(e.state.sub, e.state.title, false);
+                    //    }
+                    //} else {
+                    //    openMenu();
+                    //}
                 } else {
                     if (menuOpen) {
                         closeMenu();
@@ -150,7 +162,8 @@
             });
 
             //Shows/hides the given menu contents
-            goToMenu = function (subName) {
+            goToMenu = function (subName, text) {
+                current = { sub: subName, title: text };
                 $('.menuPane').addClass('hiddenPane');
                 switch (subName) {
                     case "main":
@@ -199,9 +212,11 @@
 
                 buttonWidth = maprange(width, 150, 675, buttonMinW, buttonMaxW);
                 buttonHeight = maprange(height, 200, 500, buttonMinH, buttonMaxH);
+                paneHeight = height - buttonHeight - menuMargin * 3;
                 paraWidth = maprange(width, 150, 800, paraMinW, paraMaxW);
                 setSize('.menuButtonSize', buttonWidth, buttonHeight);
-                setSize('.menuPane', paraWidth, height - buttonHeight - menuMargin * 3);
+                setSize('.menuPane', paraWidth, paneHeight);
+                setSize('.para', paraWidth, paneHeight - buttonHeight - menuMargin);
                 $('.SJMenu > div > .para').css({ "width": paraWidth });
 
                 leftside = (width - paraWidth) / 2;
@@ -221,6 +236,7 @@
                 $('#menuRules').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
                 $('#menuAbout').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
                 $('#home').text(width < 200 && height < 250 ? "HOME" : "BACK TO HOME");
+                $('.para > p').css({ "font-size": Math.min(maprange(width, 200, 700, 12, 22), maprange(height, 150, 450, 12, 22)) });
             }
 
             $(document).ready(function () {
