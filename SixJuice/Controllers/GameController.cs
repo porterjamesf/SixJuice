@@ -15,12 +15,5 @@ namespace SixJuice.Controllers
             ViewBag.PlayerName = playerName;
             return View();
         }
-
-        // GET: Rejoin
-        public ActionResult Rejoin(string roomCode)
-        {
-            ViewBag.RoomCode = roomCode;
-            return View();
-        }
     }
 }

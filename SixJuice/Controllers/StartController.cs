@@ -15,19 +15,5 @@ namespace SixJuice.Controllers
             ViewBag.InitMessage = message;
             return View();
         }
-
-        //public ActionResult Room(string roomCode, int playerNumber)
-        //{
-        //    ViewBag.RoomCode = roomCode;
-        //    ViewBag.PlayerX = "Player" + playerNumber.ToString();
-        //    return View();
-        //}
-
-        public ActionResult Room(string roomCode = "", string message = "")
-        {
-            ViewBag.InitRoomCode = roomCode;
-            ViewBag.InitMessage = message;
-            return View();
-        }
     }
 }

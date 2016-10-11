@@ -154,19 +154,6 @@ button {
     text-align: center;
 }
 
-.menuTitle {/**/
-    padding: 10px;
-}
-
-.menuItem {/**/
-    height: 2em;
-    margin: 5px;
-    background-color: #ece3ff;
-    border-color: #000000;
-    border-width: 1px;
-    border-radius: 3px;
-}
-
 .queenButton {
     height: 2.5em;
     margin: 0px;
@@ -199,22 +186,6 @@ button {
     height: 100%;
 }
 
-.vert5 {/**/
-    height: 5%;
-}
-
-.vert10 {/**/
-    height: 10%;
-}
-
-.vert20 {/**/
-    height: 20%;
-}
-
-.vert25 {/**/
-    height: 25%;
-}
-
 .vert30 {/*Used in QCD - update this*/
     height: 30%;
 }
@@ -223,50 +194,9 @@ button {
     height: 50%;
 }
 
-.vert60 {/**/
-    height: 60%;
-}
-
-.vert80 {/**/
-    height: 80%;
-}
-
-.sidepad {/**/
-    width: 15%;
-    display: inline-block;
-}
-
-.sidepadsandwich {/**/
-    width: 70%;
-}
-
-.titleBox {/**/
-    text-align: center;
-    min-height: 90px;
-}
-
-.buttonContainer div {/**/
-    display: block;
-}
-
 .xsmlText {/*Used for deck counts, size ignored, weight makes no difference*/
     font-size: 0.9em;
     font-weight: 300;
-}
-
-.smallText {/*Used in overlay, size ignored*/
-    font-size: 1.2em;
-    font-weight: 400;
-}
-
-.medText {/*Used in overlay, size ignored*/
-    font-size: 1.8em;
-    font-weight:600;
-}
-
-.bigText {/**/
-    font-size: 3.6em;
-    font-weight: 800;
 }
 
 .errorText {
@@ -314,17 +244,6 @@ button {
 .deckCount {
     position: absolute;
     text-align:center;
-}
-
-.rejoinButton {/**/
-    height: 2em;
-    margin-top: 7px;
-    margin-bottom: 7px;
-}
-
-.shownPane {/**/
-    height: 100%;
-    width: 100%;
 }
 
 .hiddenPane {
