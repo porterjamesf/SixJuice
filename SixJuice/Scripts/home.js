@@ -5,27 +5,13 @@
     playerName = "";
     playerInfo = null;
     ready = false;
-    decks = 1;
+    decks = 1
+    starting = false;     //just a flag so that the disconnects that happen on start won't visually change player statuses
 
     $('#setName').prop('disabled', false);
     $('#name').prop('disabled', false);
     $('#go').text("READY");
     $('#go').prop('disabled', false);
-
-    //---------HELPERS----------------
-
-    //setSize = function (selector, wid, hei) {
-    //    $(selector).css("width", wid);
-    //    $(selector).css("height", hei);
-    //}
-    //setPosition = function (selector, x, y) {
-    //    $(selector).css("left", x);
-    //    $(selector).css("top", y);
-    //}
-
-    //maprange = function (inVal, inMin, inMax, outMin, outMax) {
-    //    return Math.min(Math.max((inVal - inMin) / (inMax - inMin) * (outMax - outMin) + outMin, outMin), outMax);
-    //}
 
     //-------- SIZING --------------
 
@@ -373,15 +359,17 @@
 
     //Receives player updates
     hub.client.sendPlayerList = function (players) {
-        playerInfo = JSON.parse(players);
-        $('#roomPlayerList').empty();
-        for (i = 0; i < playerInfo.length; i++) {
-            $('#roomPlayerList').append('<div><div class="rpl_outer"><span class="rpl_inner">' + playerInfo[i].playerName + '<span class="readyMarker' +
-                (playerInfo[i].ready ? 'Y rpl_inner">&#x2713;' : 'N rpl_inner">X') + '</span></span></div></div>');
+        if (!starting) {
+            playerInfo = JSON.parse(players);
+            $('#roomPlayerList').empty();
+            for (i = 0; i < playerInfo.length; i++) {
+                $('#roomPlayerList').append('<div><div class="rpl_outer"><span class="rpl_inner">' + playerInfo[i].playerName + '<span class="readyMarker' +
+                    (playerInfo[i].ready ? 'Y rpl_inner">&#x2713;' : 'N rpl_inner">X') + '</span></span></div></div>');
+            }
+            setDecksDDLEnablement(!ready);
+            resize(window.innerWidth, window.innerHeight);
+            message("", false);
         }
-        setDecksDDLEnablement(!ready);
-        resize(window.innerWidth, window.innerHeight);
-        message("", false);
     }
 
     setDecksDDLEnablement = function (enable) {
@@ -434,6 +422,7 @@
 
     //Called when game starts - disables not ready button and shows message
     hub.client.start = function () {
+        starting = true;
         $('#go').prop('disabled', true);
         message("Shuffling the deck...", false);
     }
@@ -502,13 +491,6 @@
     //Writes message to bottom of page
     message = function (text, isError) {
         messageDest = "#" + screen + "Message";
-        //messageDest = "#roomMessage";
-        //if (screen == "start") {
-        //    messageDest = "#startMessage";
-        //}
-        //if (screen == "rejoin") {
-        //    messageDest = "#rejoinMessage";
-        //}
         if (isError) {
             $(messageDest).addClass("errorText");
         } else {

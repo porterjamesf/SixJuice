@@ -29,22 +29,144 @@
         <div id="menuRulesPane" class="menuPane hiddenPane">
             <button class="menuBack menuButtonSize">BACK</button>
             <div class="para">
-                <p>Rules written out here.</p>
+                <div><p>SixJuice - Rules</p></div>
+                <div id="goal-C"><p id="goal-doE" class="excol">&#9658; Goal</p></div>
+                <div id="goal-E" class="hiddenPane">
+                    <p id="goal-doC" class="excol">&#9660; Goal:</p>
+                    <p>The goal of SixJuice is simply to collect the most points.</p>
+                    <p>As you collect cards by various means explained below, they will be sorted into to collected piles: the
+                    point card pile, and the normal card pile. The point card pile is face-down, and as as the name implies, each of the
+                    point cards counts for one point. The normal card pile is face-up, and whoever has the most in their normal card
+                    pile at the end of the game gets an extra 2 points. If there is a normal card pile tie, each tied player gets one point.</p>
+                    <p>Mostly, the face cards are point cards and the numbered cards are normal cards, with some key exceptions. The jacks are
+                    split in half: the red jacks are normal cards like numbers (they're basically 11's) and the black jacks are point cards. Aces are
+                    normal cards, with a number value of 1. Whithin the numbered cards, the 6's count as point cards (that's the name of the game, after 
+                    all). Also, just for fun, the 4 of hearts and the 7 of hearts count as point cards.</p>
+                    <p id="goal-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="basic-C"><p id="basic-doE" class="excol">&#9658; Basic Gameplay</p></div>
+                <div id="basic-E" class="hiddenPane">
+                    <p id="basic-doC" class="excol">&#9660; Basic Gameplay:</p>
+                    <p>The game starts with 4 cards dealt to each player and 4 cards dealt out to the table. Players then take turns, with play
+                    continuing until the cards have all been drawn and no one can take any more actions on their turn. Then, the points are tallied.</p>
+                    <p>On your turn, you first draw as many cards as you need to bring your hand up to 4 (this happens automatically). Then, you may take
+                    as many actions as you can (or want do - you're not required to take an available action). Finally, you must discard one card to the table
+                    to end your turn. The only exception to that is if you have used all 4 cards in your hand and have none left to discard.</p>
+                    <p> The available actions are all explained below.</p>
+                    <p id="basic-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="sums-C"><p id="sums-doE" class="excol">&#9658; Taking Numbered Cards</p></div>
+                <div id="sums-E" class="hiddenPane">
+                    <p id="sums-doC" class="excol">&#9660; Taking Numbered Cards:</p>
+                    <p>The most basic actions is using numbered cards in your hand to take numbered cards on the table. You do this by matching sums. If the sum of 
+                    some cards from your hand matches the sum of some cards from the table, you can take all of those cards (from your hand and the table). You don't
+                    have to use multiple cards; one or both of the sets can be a single card. For example, you could take a 5 with a 3 and a 2, or just another 5.</p>
+                    <p>To perform this action, select each of the cards from your hand and on the table by clicking on them. If the selected sets do indeed match in
+                    their sums, you will see an action button at the bottom saying "Take". Press it to collect the cards. Note: if you are going to use all the cards of your
+                    hand, it is not necessary to select any. When none are selected, the game treats it as if all are selected. The same is true of the table.</p>
+                    <p>This only works with sums; you cannot use subtraction, multiplication, division, or any other mathematical operation.</p>
+                    <p>It is important to note that aces are number cards with a value of 1 and red jacks (not black jacks!) are number cards with a value of 11.</p>
+                    <p>When the cards taken by matching sums are collected, they are distributed into your normal card and point cards piles accordingly. Just because
+                    a card is a number card doesn't mean it counts as a normal card. All the 6's are point cards, as well as the 4 of hearts and 7 of hearts.</p>
+                    <p id="sums-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="kings-C"><p id="kings-doE" class="excol">&#9658; Kings</p></div>
+                <div id="kings-E" class="hiddenPane">
+                    <p id="kings-doC" class="excol">&#9660; Kings:</p>
+                    <p>Kings are special. To play one, simply select it and press the "Use" action button. The king will be played next to your hand. Your played kings
+                    are visible to all players. There is no limit to how many kings you can have in play at once.</p>
+                    <p>Each king requires 2 or 3 number cards to be collected and played on the king before it is complete, at which point the king and the collected
+                    cards for that king are taken and distributed to your point card and normal card piles. The cards to be collected depend on suit: the king of hearts
+                    needs an ace, a 5, and a 9; the king of diamonds needs 2, 6, and 10; clubs needs 3, 7, and jack (a red jack), and finally spades needs 4 and 8. Don't
+                    worry about memorizing these - the game will correctly asses which cards you need.</p>
+                    <p>At any point on your turn, you can collect cards for your played king(s). Press the "Kings" action button or click on a king to open the Kings
+                    overlay. Here, you can select cards from your hand or the table to play on kings, or select the needed cards that aren't in either and ask for
+                    them from other players. If the asked player has any of the asked-for cards in their hand, they must give them to you for your king(s). You can
+                    ask every player on every turn, but you must choose them one by one (in case multiple players have the same card).
+                    If a player has no cards, or you have already asked them for all needed cards on this turn, their name will be greyed out.</p>
+                    <p>Alternatively, if you select a card or group of cards from your hand and/or the table that all can be used on your king(s), you will see a "Use
+                    for Kings" action button appear. You can press that to play them on your king(s) without having to open the Kings overlay. You must still open the
+                    kings overlay to ask other players for cards.</p>
+                    <p>Cards must be collected first from your hand, then from the table, and finally from other players. You do not necessarily have to perform those
+                    actions in that order, but you cannot use a card from the table on a king if you started your turn with that card in your hand. Likewise, you
+                    cannot ask other players for a card that was in your hand or on the table at the start of your turn.
+                    This rule is enforced automatically, but it can be cause for confusion.</p>
+                    <p>To add to the confusion, in mulitdeck games this rule may appear to violated on occasion, but it is in fact held. For example, say you have two
+                    kings of hearts in play, and also a 5 in your hand. You decide to use that 5 and a 1 to collect a 6 from the table, rather than use it on one of
+                    your kings. Then, you ask for and receive a 5 from another player. That other player may object, saying that you had a 5 in your hand, so you can't
+                    take one. But, you actually needed two 5's. You would not be allowed to take two 5's from the table or another player, but you can take 1.</p>
+                    <p>If a king is left in play incomplete at the end of the game, neither it nor any of the cards played on it are counted towards your point card or
+                    normal card totals.</p>
+                    <p id="kings-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="queens-C"><p id="queens-doE" class="excol">&#9658; Queens</p></div>
+                <div id="queens-E" class="hiddenPane">
+                    <p id="queens-doC" class="excol">&#9660; Queens:</p>
+                    <p>Queens are powerful cards. To play a queen, select it and press the "Use" action button. It will sweep the whole table and you can collect all the swept
+                    cards, and the queen itself, for your normal and point card piles.</p>
+                    <p>When you take this action, it won't happen right away. Instead, an overlay will pop up stating that you are using a queen. Everyone sees this, and
+                    all players must push "OK" (except you, it's understood that you're ok with it since you're playing it) before the sweep happens. This is because the
+                    queen has one weakness: the jack of clubs. If another player has a jack of clubs, they can steal all your swept cards and queen and collect the points
+                    instead of you. More details about the jack of clubs are explained below.</p>
+                    <p>Everyone must see and acknowledge the playing of a queen in order to provide the owner of a jack of clubs the opportunity to use it, be you also don't
+                    want to be stuck waiting forever if one player is not paying attention. So, there's a countdown on the queen overlay. At the end of the countdown, any
+                    player that hasn't OK'd will automaticaly have an OK sent for them and the play will be completed. Any player with a jack of clubs needs to play it within
+                    the countdown window, or they've lost their chance.</p>
+                    <p>Note that a queen is the only way to take a card from the table that can't be taken by matching sums (well, with one exception, explained below). So,
+                    if a king, queen, or black jack gets dealt to the table, or discared by a player, it can only be collected by sweeping with a queen.</p>
+                    <p id="queens-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="jackC-C"><p id="jackC-doE" class="excol">&#9658; Jack of Clubs</p></div>
+                <div id="jackC-E" class="hiddenPane">
+                    <p id="jackC-doC" class="excol">&#9660; Jack of Clubs:</p>
+                    <p>As explained above, a jack of clubs is a special card that can be used to counter a queen. If you have the jack of clubs in your hand and another
+                    player uses a queen, you'll see the standard pop-up overlay stating that a queen is being played. However, instead of merely having the option of pushing
+                    "OK", you'll now have two buttons: "Play Jack of Clubs" and "Hold Jack of Clubs". The latter (hold) works exactly like the OK button, acknowledging the
+                    queen and allowing the other player to sweep the table. If you push the button to play the jack, then you instead get to collect the swept cards,
+                    the played queen, and also the jack of clubs from your hand.</p>
+                    <p>Note that none of this happens on your turn. After intercepting the queen, it is still the queen players turn, and they may continue to take actions.</p>
+                    <p>There is one move you can make with the jack of clubs on your turn. If there is a queen on the table, you may select it and your jack of clubs and take
+                    them. You can only collect one queen this way. This is the only way a non-numbered card can be picked up from the table besides sweeping with a queen.
+                    </p>
+                    <p>In a multideck game, the queen/jack-of-clubs situation gets a little more complex. Now, there may be multiple jacks of clubs out there. In this case,
+                    another jack of clubs can be used after the first to collect the swept cards, queen, first jack, and the second jack. This can go on for as many jacks of
+                    clubs as there are decks.</p>
+                    <p>When a queen is played and the overlay pops up, any player with a jack of clubs (besides the queen player) will see options to play or hold their jacks.
+                    The first one to play their jack of clubs starts a whole new countdown. Now, the overlay will state not just the playing of a queen, but of the jack as well.
+                    Any other players who have jacks of clubs (including the original queen player, but not the player of the first jack of clubs) can now play their jack on top
+                    of the first. If so, it starts a new countdown, and so on. The whole process ends when all players besides the most recent jack player clicks on "OK"
+                    or "Hold Jack of Clubs", or the countdown ends. Then, the last person to play a jack of clubs collects the swept cards, queen, and all played jacks, and the
+                    original queen player resumes their turn.</p>
+                    <p id="jackC-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                <div id="jackS-C"><p id="jackS-doE" class="excol">&#9658; Jack of Spades</p></div>
+                <div id="jackS-E" class="hiddenPane">
+                    <p id="jackS-doC" class="excol">&#9660; Jack of Spades:</p>
+                    <p>The only card left is the jack of spades. This card can be used to steal a point card from another player.</p>
+                    <p>On your turn, select the jack of spades and press "Use". If there is only one other player, or only one of the other players has any point cards, then
+                    that player will lose a point card from their collected pile and you will gain one. The jack of spades simply disappears - it is not itself collected. If there
+                    are multiple other players with point cards, you simply choose one to steal from.</p>
+                    <p>If none of your opponents have any point cards, you will not be able to use the jack of spades.</p>
+                    <p>The only way to collect the jack of spades itself for your point card pile is to sweep it with a Queen. Either way, it only ever gives you 1 point.</p>
+                    <p id="jackS-doC" class="excol">&#9650; (collapse)</p>
+                </div>
+                @*<div id="-C"><p id="-doE" class="excol">&#9658; </p></div>
+                <div id="-E" class="hiddenPane">
+                    <p id="-doC" class="excol">&#9660; :</p>
+                    <p></p>
+                    <p id="-doC" class="excol">&#9650; (collapse)</p>
+                </div>*@
             </div>
         </div>
         <div id="menuAboutPane" class="menuPane hiddenPane">
             <button class="menuBack menuButtonSize">BACK</button>
-            <div class="para">
-                <p>Read all about stuff, and junk.</p>
-            </div>
+            <div class="para"><div>
+                <p>About SixJuice</p>
+                <p>SixJuice is loosely inspired by the card game <a href="http://www.gamewright.com/gamewright/index.php?section=games&page=game&show=84">Frog Juice&#x2122;</a>
+                 by <a href="http://www.gamewright.com/gwintro.html">Gamewright&#x00ae;</a>.</p>
+                <p>SixJuice is developed by James Porter.</p>
+            </div></div>
         </div>
-        @*<div class="vert10 medText menuTitle">SixJuice</div>
-        <span class="sidepad"></span>
-        <button class="menuItem sidepadsandwich smallText" id="home">Home</button>
-        <span class="sidepad"></span>
-        <button class="menuItem sidepadsandwich smallText" id="rules">Rules</button>
-        <span class="sidepad"></span>
-        <button class="menuItem sidepadsandwich smallText" id="about">About</button>*@
     </div>
 
     <script src="Scripts/jquery-1.10.2.min.js"></script>
@@ -53,27 +175,6 @@
 
     <script type="text/javascript">
         $(function () {
-            // Menu history item class - node of linked list for internal menu memory stack
-            //function menuHistoryItem(subname, text, backItem) {
-            //    this.sub = subname;
-            //    this.title = text;
-            //    this.back = backItem;
-
-            //    this.getHistoryObject = function() {
-            //        return { screen: "menu", sub: this.sub, title: this.title };
-            //    }
-
-            //    this.pushThisState = function() {
-            //        history.pushState(this.getHistoryObject(), this.title, window.location);
-            //    }
-            //}
-
-            // Use for going to a new menu screen - adds it to history (internal & browser) and loads screen
-            //addAndGoToMenu = function (subname, text, pushToBrowser) {
-            //    current = new menuHistoryItem(subname, text, current);
-            //    if (pushToBrowser) { current.pushThisState(); }
-            //    goToMenu(current.sub);
-            //}
             addAndGoToMenu = function (subname, text) {
                 current = { sub: subname, title: text };
                 history.pushState({ screen: "menu", sub: current.sub, title: current.title }, current.title, window.location);
@@ -81,7 +182,6 @@
             }
 
             // Reference to top of internal menu memory stack (as linked list). This seed item always stays at end (bottom).
-            //current = new menuHistoryItem("main", "Menu - Main", null);
             current = { sub: "main", title: "Main menu" };
             menuOpen = false;
 
@@ -104,7 +204,6 @@
 
             $('.SJNavButton').click(function () {
                 if (!menuOpen) {
-                    //current.pushThisState();
                     history.pushState({ screen: "menu", sub: current.sub, title: current.title}, current.title, window.location);
                     openMenu();
                 } else {
@@ -127,31 +226,26 @@
 
             $('.menuBack').click(function () {
                 window.history.back();
-            })
+            });
+
+            $('.excol').click(function (e) {
+                parts = e.target.id.split('-');
+                isExpanding = true;
+                if (parts[1] == 'doC') {
+                    isExpanding = false;
+                }
+                $('#' + parts[0] + (isExpanding ? '-E' : '-C')).removeClass("hiddenPane");
+                $('#' + parts[0] + (isExpanding ? '-C' : '-E')).addClass("hiddenPane");
+            });
 
             // Fired on browser back/forward navigation
             //  Here, history states are intercepted if they are for menu navigation. Other screen history items are passed along to home.js or game.js
-            //  If history state is a menu state, the menu is brought up. Otherwise, it is closed. If history state is a menu state and the menu is already
-            //  up, the state is used to navigate to the right menu. An internal menu history state is maintained for the purpose of returning to the same
-            //  point when switching back and forth from the menu. Internal history is simply a linked list, containing only the 'back' history ('forward'
-            //  items are just added when needed);
             window.addEventListener('popstate', function (e) {
                 if (e.state != null && e.state.screen == "menu") {
                     if (!menuOpen) {
                         openMenu();
                     }
                     goToMenu(e.state.sub, e.state.title);
-
-                    //if (menuOpen) {
-                    //    if (current.back != null && current.back.sub == e.state.sub) { // Popped state matches internal previous menu state: this is a 'back'
-                    //        current = current.back;
-                    //        goToMenu(e.state.sub);
-                    //    } else { // Popped state isn't previous menu state: this is a 'forward'
-                    //        addAndGoToMenu(e.state.sub, e.state.title, false);
-                    //    }
-                    //} else {
-                    //    openMenu();
-                    //}
                 } else {
                     if (menuOpen) {
                         closeMenu();
@@ -236,7 +330,7 @@
                 $('#menuRules').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
                 $('#menuAbout').css({ "font-size": maprange(Math.min(width, height * 1.3), 200, 650, 15, 40) });
                 $('#home').text(width < 200 && height < 250 ? "HOME" : "BACK TO HOME");
-                $('.para > p').css({ "font-size": Math.min(maprange(width, 200, 700, 12, 22), maprange(height, 150, 450, 12, 22)) });
+                $('.para > div > p').css({ "font-size": Math.min(maprange(width, 200, 700, 12, 22), maprange(height, 150, 450, 12, 22)) });
             }
 
             $(document).ready(function () {

@@ -7,6 +7,7 @@ button {
     background-color: #ece3ff;
     border: 1px solid black;
     border-radius: 3px;
+    cursor: pointer;
 }
 
 .actionButtonOverlay {
@@ -137,11 +138,11 @@ button {
     padding: 0px;
 }
 
-.qbSidePad {
+.qbSidePad {/*Used in QCD*/
     display: inline-block;
 }
 
-.qbMiddlePad {
+.qbMiddlePad {/*Used in QCD*/
     height: 10%;
 }
 
@@ -153,11 +154,11 @@ button {
     text-align: center;
 }
 
-.menuTitle {
+.menuTitle {/**/
     padding: 10px;
 }
 
-.menuItem {
+.menuItem {/**/
     height: 2em;
     margin: 5px;
     background-color: #ece3ff;
@@ -186,7 +187,7 @@ button {
     padding: 5px;
 }
 
-.spiv {
+.spiv {/*Used in overlays*/
     display:block;
 }
 
@@ -198,72 +199,72 @@ button {
     height: 100%;
 }
 
-.vert5 {
+.vert5 {/**/
     height: 5%;
 }
 
-.vert10 {
+.vert10 {/**/
     height: 10%;
 }
 
-.vert20 {
+.vert20 {/**/
     height: 20%;
 }
 
-.vert25 {
+.vert25 {/**/
     height: 25%;
 }
 
-.vert30 {
+.vert30 {/*Used in QCD - update this*/
     height: 30%;
 }
 
-.vert50 {
+.vert50 {/*Used in QCD*/
     height: 50%;
 }
 
-.vert60 {
+.vert60 {/**/
     height: 60%;
 }
 
-.vert80 {
+.vert80 {/**/
     height: 80%;
 }
 
-.sidepad {
+.sidepad {/**/
     width: 15%;
     display: inline-block;
 }
 
-.sidepadsandwich {
+.sidepadsandwich {/**/
     width: 70%;
 }
 
-.titleBox {
+.titleBox {/**/
     text-align: center;
     min-height: 90px;
 }
 
-.buttonContainer div {
+.buttonContainer div {/**/
     display: block;
 }
 
-.xsmlText {
+.xsmlText {/*Used for deck counts, size ignored, weight makes no difference*/
     font-size: 0.9em;
     font-weight: 300;
 }
 
-.smallText {
+.smallText {/*Used in overlay, size ignored*/
     font-size: 1.2em;
     font-weight: 400;
 }
 
-.medText {
+.medText {/*Used in overlay, size ignored*/
     font-size: 1.8em;
     font-weight:600;
 }
 
-.bigText {
+.bigText {/**/
     font-size: 3.6em;
     font-weight: 800;
 }
@@ -283,7 +284,6 @@ button {
 
 .winner {
     position: absolute;
-    /*text-align: center;*/
 }
 .winner div {
     text-align: center;
@@ -296,14 +296,6 @@ button {
     border-radius: 3px;
     border: 1px solid rgba(121, 221, 178, 0.5);
 }
-
-/*.goRow {
-    background-color: #999999;
-}
-
-.goRowH {
-    background-color: #999999;
-}*/
 
 .goReadout span {
     position: absolute;
@@ -324,13 +316,13 @@ button {
     text-align:center;
 }
 
-.rejoinButton {
+.rejoinButton {/**/
     height: 2em;
     margin-top: 7px;
     margin-bottom: 7px;
 }
 
-.shownPane {
+.shownPane {/**/
     height: 100%;
     width: 100%;
 }
@@ -345,7 +337,6 @@ button {
 }
 
 .deck {
-    /*background-color: #666666;*/
     position: absolute;
 }
 
@@ -374,7 +365,6 @@ button {
 
 .cardSelected {
     top: -8px;
-    /*box-shadow: inset 0 0 0 1000px rgba(155,0,255,.12);*/
 }
 
 .boardrow {
@@ -401,19 +391,24 @@ button {
 #startPane > * {
     position: absolute;
 }
+
 #roomPane > * {
     position: absolute;
 }
+
 #rejoinPane > * {
     position: absolute;
 }
+
 #rejoinPlayerList > * {
     position: absolute;
 }
+
 #rejoinPlayerList {
     overflow-y: scroll;
     overflow-x: hidden;
 }
+
 #roomPlayerList {
     overflow-y: scroll;
     overflow-x: hidden;
@@ -460,10 +455,6 @@ button {
     clear: both;
 }
 
-#roomMessage {
-    font-size: 20px;
-}
-
 .para > * {
     position: relative;
 }
@@ -482,4 +473,8 @@ button {
 
 .para {
     overflow-y: auto;
+}
+
+.excol {
+    cursor: pointer;
 }

@@ -94,14 +94,6 @@
     getCardHole = function () {
         return '<div class="emptyCard"/>';
     }
-    //setSize = function (selector, wid, hei) {
-    //    $(selector).css("width", wid);
-    //    $(selector).css("height", hei);
-    //}
-    //setPosition = function (selector, x, y) {
-    //    $(selector).css("left", x);
-    //    $(selector).css("top", y);
-    //}
 
     //Converts a 1 digit number to 2 digit form with a leading 0, and leaves
     // a 2 digit number as it is. Untested with other sized numbers.
@@ -1342,10 +1334,13 @@
     }
 
     updateSweeperText = function () {
-    	var text = "";
-    	queenJocPlayers.forEach(function (player, index) {
-    		text = text + "<br>" + (player == playerName ? "P" : player + " is p") + "laying a " + (index == 0 ? "Queen" : "Jack of Clubs") + "...";
-    	});
+        var text = "";
+        for (var i = queenJocPlayers.length - 1; i >= 0; i--) {
+            text = text + "<br>" + (queenJocPlayers[i] == playerName ? "P" : queenJocPlayers[i] + " is p") + "laying a " + (i == queenJocPlayers.length - 1 ? "Queen" : "Jack of Clubs") + "...";
+        }
+    	//queenJocPlayers.forEach(function (player, index) {
+    	//	text = text + "<br>" + (player == playerName ? "P" : player + " is p") + "laying a " + (index == 0 ? "Queen" : "Jack of Clubs") + "...";
+    	//});
     	$('#sweeper').html(text);
     }
 

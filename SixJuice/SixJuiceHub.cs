@@ -28,6 +28,12 @@ namespace SixJuice
 			new Card { number = 6, suit = "hearts", additional = "deck0" },
 			new Card { number = 5, suit = "clubs", additional = "deck1" }
 		}).ToList();
+        private List<Card> player3Hand = (new Card[] {
+            new Card { number = 11, suit = "clubs", additional = "deck2" },
+            new Card { number = 7, suit = "hearts", additional = "deck2" },
+            new Card { number = 6, suit = "hearts", additional = "deck2" },
+            new Card { number = 5, suit = "clubs", additional = "deck2" }
+        }).ToList();
 		private List<Card> table = (new Card[] {
 			new Card { number = 1, suit = "spades", additional = "deck0" },
 			new Card { number = 2, suit = "spades", additional = "deck1" },
@@ -209,11 +215,19 @@ namespace SixJuice
 								}
 								else
 								{
-									if (Contains(table, card))
-									{
-										game.Table.Add(card);
-										added = true;
-									}
+                                    if(game.Players.Count > 2 && Contains(player3Hand, card))
+                                    {
+                                        game.Players[2].Hand.Add(card);
+                                        added = true;
+                                    } else
+                                    {
+                                        if (Contains(table, card))
+                                        {
+                                            game.Table.Add(card);
+                                            added = true;
+                                        }
+
+                                    }
 								}
 							}
 						}
