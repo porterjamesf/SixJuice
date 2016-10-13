@@ -289,17 +289,25 @@
         setSize('.overlay', wid - 1, hei - 1);
         setSize('.overlay .overlayContent', oWidth, oHeight);
         setPosition('.overlay .overlayContent', (wid - oWidth) / 2, (hei - oHeight) / 2);
+
         //Quenn/JOC buttons
         $('.queenButtons').css("width", oWidth);
-        $('.queenButton').css("width", oWidth * 0.7);
-        $('.qbSidePad').css("width", oWidth * 0.13);
+        var qbHeight = Math.max(Math.min(oHeight * 0.15, 100), 40);
+        var qbWidth = Math.min(oWidth * 0.7, 400);
+        setSize('.queenButton', qbWidth, qbHeight);
+        $('.queenButton').css("left", (oWidth - qbWidth) / 2);
+        var qbY = standardmargins[size] * 3;
+        $('#OK').css("top", qbY);
+        $('#UseJack').css("top", qbY);
+        qbY += qbHeight + standardmargins[size];
+        $('#HoldJack').css("top", qbY);
+
         //Game over readout
         setSize('.gameOver', width, height / 6);
         $('.gameOver').css("top", height / 3);
         setSize('.winner', width, height / 2);
         $('.winner').css("top", height / 2);
         $('.goReadout, .goReadout span, .goReadoutData').css("width", width / 5);
-        //$('.goReadout span').css("width", width / 5);
         $('.goCol1H, .goCol1').css("left", width / 10);
         $('.goCol2H, .goCol2').css("left", 3*width / 10);
         $('.goCol3H, .goCol3').css("left", 5*width / 10);
@@ -469,12 +477,12 @@
         if (gameOverNotShown) {
             clearActions();
             //Generate lines in game over readout
-            for (var i = 0; i < gameResults.PlayerNames.length; i++) {
-                $('.winner').append('<div id="' + gameResults.PlayerNames[i] + 'readout" class="goRow">' +
-                    '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[i] + '</span>' +
-                    '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[i] + '</span>' +
-                    '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[i] + '</span>' +
-                    '<span class="smallText goReadoutData goCol4">' + gameResults.Scores[i] + '</span>' +
+            for (var i = 0; i < gameResults.Ranks.length; i++) {
+                $('.winner').append('<div id="' + gameResults.PlayerNames[gameResults.Ranks[i]] + 'readout" class="goRow">' +
+                    '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[gameResults.Ranks[i]] + '</span>' +
+                    '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[gameResults.Ranks[i]] + '</span>' +
+                    '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[gameResults.Ranks[i]] + '</span>' +
+                    '<span class="smallText goReadoutData goCol4">' + gameResults.Scores[gameResults.Ranks[i]] + '</span>' +
                     '</div>');
             }
             $('.playerLabel').hide();

@@ -15,7 +15,7 @@ namespace SixJuice
         public static IDatabaseHelper _db = new MongoDBHelper();
 
 		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
-		private bool mock = false;
+		private bool mock = true;
 		private List<Card> player1Hand = (new Card[] {
 			new Card { number = 12, suit = "spades", additional = "deck0" },
 			new Card { number = 11, suit = "clubs", additional = "deck0" },

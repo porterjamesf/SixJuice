@@ -1,6 +1,13 @@
-﻿body {
+﻿/* Site-wide */
+
+body {
     overflow: hidden;
     margin: 0px;
+}
+
+.SJBody {
+    position:absolute;
+    background-color: #f8f8f8;
 }
 
 button {
@@ -9,6 +16,31 @@ button {
     border-radius: 3px;
     cursor: pointer;
 }
+
+.hiddenPane {
+    display: none;
+}
+
+.overlayContent {
+    background-color: #F0F0F0;
+    position: absolute;
+    border-radius: 2px;
+    padding: 5px;
+}
+
+.wide {
+    width: 100%;
+}
+
+.tall {
+    height: 100%;
+}
+
+.errorText {
+    color: #aa0000;
+}
+
+/* Top-level overlays/Z order */
 
 .actionButtonOverlay {
     position: absolute;
@@ -24,16 +56,16 @@ button {
     background-color: rgba(150, 140, 150, 0.4);
 }
 
-.waitOverlay {
-    position:absolute;
-    background-color:rgba(0, 0, 0, 0.3);
-    z-index: 120;
-}
-
 .queenOverlay {
     position: absolute;
     z-index: 115;
     background-color: rgba(10, 0, 10, 0.09);
+}
+
+.waitOverlay {
+    position:absolute;
+    background-color:rgba(0, 0, 0, 0.3);
+    z-index: 120;
 }
 
 .kingOverlay {
@@ -42,15 +74,7 @@ button {
     background-color: rgba(10, 0, 10, 0.09);
 }
 
-.SJMenu {
-    position:absolute;
-    width: 100%;
-    height: 0%;
-    z-index: 150;
-    background-color:rgba(200, 195, 200, 0.7);
-    transition: 0.3s;
-    overflow-y:hidden;
-}
+/* Menu button */
 
 .SJNav {
     position:absolute;
@@ -71,6 +95,59 @@ button {
     pointer-events: visible;
     z-index: 200;
 }
+
+.SJNavButtonHighlight {
+    background-color: #A0A0A0;
+}
+
+.SJIcon-bar {
+    display: block;
+    height: 5px;
+    margin: 0.25em;
+    background-color: #79ddb2;
+}
+
+.SJIcon-barHighlight {
+    background-color: #97ffdf;
+}
+
+/* Menu */
+
+.SJMenu {
+    position:absolute;
+    width: 100%;
+    height: 0%;
+    z-index: 150;
+    background-color:rgba(200, 195, 200, 0.7);
+    transition: 0.3s;
+    overflow-y:hidden;
+}
+
+.para {
+    overflow-y: auto;
+}
+
+.para > * {
+    position: relative;
+}
+
+#menuTitle {
+    position: absolute;
+}
+
+.menuPane {
+    position: absolute;
+}
+
+.menuPane > * {
+    position: absolute;
+}
+
+.excol {
+    cursor: pointer;
+}
+
+/* Kings overlay */
 
 #kingContent {
     padding: 5px;
@@ -99,10 +176,29 @@ button {
     padding: 10px;
 }
 
+.kButton {
+    position: absolute;
+}
+
+.pButton {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Action button pane */
+
 .actionButtons {
     width: 98%;
     position: absolute;
     bottom: 0;
+}
+
+.actionButton {
+    vertical-align: middle;
+    display: inline-block;
+    font-size: 1.2em;
+    font-weight: 400;
+    pointer-events: visible;
 }
 
 .textReadout {
@@ -118,43 +214,20 @@ button {
     right: 0px;
 }
 
-.SJNavButtonHighlight {
-    background-color: #A0A0A0;
-}
-
-.SJIcon-bar {
-    display: block;
-    height: 5px;
-    margin: 0.25em;
-    background-color: #79ddb2;
-}
-
-.SJIcon-barHighlight {
-    background-color: #97ffdf;
-}
+/* Queen overlay */
 
 .queenButtons {
     position:absolute;
     padding: 0px;
 }
 
-.qbSidePad {/*Used in QCD*/
-    display: inline-block;
-}
-
-.qbMiddlePad {/*Used in QCD*/
-    height: 10%;
-}
-
-#sweeper {
-    text-align: center;
-}
-
 #count {
+    transform: translateY(50%);
     text-align: center;
 }
 
 .queenButton {
+    position: absolute;
     height: 2.5em;
     margin: 0px;
     border-color: #666666;
@@ -162,50 +235,58 @@ button {
     border-radius: 3px;
 }
 
-.SJBody {
-    position:absolute;
-    background-color: #f8f8f8;
+/* Game board */
+
+.gameboard {
+    position: relative;
+    overflow: auto;
 }
 
-.overlayContent {
-    background-color: #B0B0B0;
+.deck {
     position: absolute;
-    border-radius: 5px;
-    padding: 5px;
 }
 
-.spiv {/*Used in overlays*/
-    display:block;
-}
-
-.wide {
-    width: 100%;
-}
-
-.tall {
-    height: 100%;
-}
-
-.vert30 {/*Used in QCD - update this*/
-    height: 30%;
-}
-
-.vert50 {/*Used in QCD*/
-    height: 50%;
-}
-
-.xsmlText {/*Used for deck counts, size ignored, weight makes no difference*/
-    font-size: 0.9em;
-    font-weight: 300;
-}
-
-.errorText {
-    color: #aa0000;
+.cardBar {
+    position: absolute;
 }
 
 .playerLabel {
     position: absolute;
 }
+
+.deckCount {
+    position: absolute;
+    text-align:center;
+}
+
+.king {
+    position: absolute;
+}
+
+.card {
+    position: absolute;
+    border: 1px solid #666666;
+    border-radius: 3px;
+    top: 0px;
+}
+
+.emptyCard {
+    position: absolute;
+    border: 1px dotted #999999;
+    border-radius: 3px;
+    left: 15px;
+    top: 15px;
+}
+
+.cardSelected {
+    top: -8px;
+}
+
+.boardrow {
+    position: relative;
+}
+
+/* Game Over */
 
 .gameOver {
     position: absolute;
@@ -241,96 +322,10 @@ button {
     border-radius: 3px;
 }
 
-.deckCount {
-    position: absolute;
-    text-align:center;
-}
-
-.hiddenPane {
-    display: none;
-}
-
-.gameboard {
-    position: relative;
-    overflow: auto;
-}
-
-.deck {
-    position: absolute;
-}
-
-.cardBar {
-    position: absolute;
-}
-
-.king {
-    position: absolute;
-}
-
-.card {
-    position: absolute;
-    border: 1px solid #666666;
-    border-radius: 3px;
-    top: 0px;
-}
-
-.emptyCard {
-    position: absolute;
-    border: 1px dotted #999999;
-    border-radius: 3px;
-    left: 15px;
-    top: 15px;
-}
-
-.cardSelected {
-    top: -8px;
-}
-
-.boardrow {
-    position: relative;
-}
-
-.actionButton {
-    vertical-align: middle;
-    display: inline-block;
-    font-size: 1.2em;
-    font-weight: 400;
-    pointer-events: visible;
-}
-
-.kButton {
-    position: absolute;
-}
-
-.pButton {
-    position: relative;
-    overflow: hidden;
-}
+/* Start screen */
 
 #startPane > * {
     position: absolute;
-}
-
-#roomPane > * {
-    position: absolute;
-}
-
-#rejoinPane > * {
-    position: absolute;
-}
-
-#rejoinPlayerList > * {
-    position: absolute;
-}
-
-#rejoinPlayerList {
-    overflow-y: scroll;
-    overflow-x: hidden;
-}
-
-#roomPlayerList {
-    overflow-y: scroll;
-    overflow-x: hidden;
 }
 
 #SixJuiceBox {
@@ -343,6 +338,12 @@ button {
     padding: 1px 16px;
 }
 
+/* Room screen */
+
+#roomPane > * {
+    position: absolute;
+}
+
 #nameTextText {
     position: absolute;
     bottom: 0px;
@@ -350,6 +351,15 @@ button {
 
 #setName {
     overflow: hidden;
+}
+
+#roomPlayerList {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#roomPlayerList > div {
+    clear: both;
 }
 
 .readyMarkerN {
@@ -370,30 +380,17 @@ button {
     background-color: #f8f8f8;
 }
 
-#roomPlayerList > div {
-    clear: both;
-}
+/* Rejoin screen */
 
-.para > * {
-    position: relative;
-}
-
-#menuTitle {
+#rejoinPane > * {
     position: absolute;
 }
 
-.menuPane {
+#rejoinPlayerList {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+
+#rejoinPlayerList > * {
     position: absolute;
-}
-
-.menuPane > * {
-    position: absolute;
-}
-
-.para {
-    overflow-y: auto;
-}
-
-.excol {
-    cursor: pointer;
 }

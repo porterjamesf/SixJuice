@@ -5,22 +5,17 @@
 }
 <div class="queenOverlay overlay" style="display:none">
     <div class="overlayContent" style="display:inline-block">
-        <span id="sweeper" class="medText spiv">Player1 is playing a Queen</span>
-        <span id="count" class="medText spiv">5...</span>
-        <div class="vert30"></div>
-        <div id="nojack" class="queenButtons vert50">
-            <span class="qbSidePad"></span>
-            <button class="queenButton sidepadsandwich smallText" id="OK">OK</button>
+        <div id="sweeper" class="smallText">Player1 is playing a Queen</div>
+        <div id="count" class="medText">15</div>
+        <div id="nojack" class="queenButtons">
+            <button class="queenButton smallText" id="OK">OK</button>
         </div>
-        <div id="jack" class="queenButtons vert50">
+        <div id="jack" class="queenButtons">
             <div>
-                <span class="qbSidePad"></span>
-                <button class="queenButton sidepadsandwich smallText" id="UseJack">Use Jack of Clubs</button>
+                <button class="queenButton smallText" id="UseJack">Use Jack of Clubs</button>
             </div>
-            <div class="qbMiddlePad"></div>
             <div>
-                <span class="qbSidePad"></span>
-                <button class="queenButton sidepadsandwich smallText" id="HoldJack">Hold Jack Of Clubs</button>
+                <button class="queenButton smallText" id="HoldJack">Hold Jack Of Clubs</button>
             </div>
         </div>
     </div>
@@ -60,11 +55,11 @@
     </div>
 </div>
 <div id="wait" class="waitOverlay overlay">
-    <span class="overlayContent">
-        <span class="medText spiv">Waiting for players:</span>
+    <div class="overlayContent">
+        <div class="medText">Waiting for players:</div>
         <span id="waitList"></span>
 
-    </span>
+    </div>
 </div>
 <div class="actionButtonOverlay">
     <div id="josPlayerMenu" class="kPlayerChooser" style="display:none"></div>

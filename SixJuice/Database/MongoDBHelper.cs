@@ -13,7 +13,8 @@ namespace SixJuice.Database
     {
         public IMongoDatabase _db;
 
-        public TimeSpan expirePeriod = TimeSpan.FromHours(2); // How long a game persists in the database after all players leave (if it's still going)
+        public TimeSpan gameExpirePeriod = TimeSpan.FromHours(12); // How long a game persists in the database after all players leave (if it's still going)
+        public TimeSpan connectedPlayerExpirePeriod = TimeSpan.FromHours(12); // How long a connected player record lasts if it gets orphaned (improper disconnect)
 
         public IMongoCollection<Game> games
         {
@@ -34,17 +35,48 @@ namespace SixJuice.Database
         {
             _db = (new MongoClient(Properties.Settings.Default.connectionString)).GetDatabase("Sixjuice");
 
-            // Checks if the expire period on the date created index has been changed. If so, drops the index and creates a new one with the updated expire period
-            if (!TimeSpan.FromSeconds(games.Indexes.List().ToList().Where(i => i.Values.ElementAt(2).AsString.Equals("DateCreated_-1")).Single().Values.ElementAt(4).AsDouble).Equals(expirePeriod))
+            // Creating/updating expire index for Games
+            bool createGameExpireIndex = false;
+            try
             {
-                games.Indexes.DropOneAsync("DateCreated_-1");
+                if (!TimeSpan.FromSeconds(games.Indexes.List().ToList().Where(i => i.Values.ElementAt(2).AsString.Equals("DateCreated_-1")).Single().Values.ElementAt(4).AsDouble).Equals(gameExpirePeriod))
+                {
+                    games.Indexes.DropOneAsync("DateCreated_-1");
+                    createGameExpireIndex = true;
+                }
+            } catch (InvalidOperationException)
+            {
+                createGameExpireIndex = true;
+            }
+            if(createGameExpireIndex)
+            {
                 games.Indexes.CreateOneAsync(Builders<Game>.IndexKeys.Descending("DateCreated"), new CreateIndexOptions
                 {
-                    ExpireAfter = expirePeriod
+                    ExpireAfter = gameExpirePeriod
+                });
+            }
+
+            // Creating/updating expire index for Connected Players
+            bool createConnectedPlayerExpireIndex = false;
+            try
+            {
+                if (!TimeSpan.FromSeconds(connectedPlayers.Indexes.List().ToList().Where(i => i.Values.ElementAt(2).AsString.Equals("DateCreated_-1")).Single().Values.ElementAt(4).AsDouble).Equals(connectedPlayerExpirePeriod))
+                {
+                    connectedPlayers.Indexes.DropOneAsync("DateCreated_-1");
+                    createConnectedPlayerExpireIndex = true;
+                }
+            }
+            catch (InvalidOperationException) {
+                createConnectedPlayerExpireIndex = true;
+            }
+            if (createConnectedPlayerExpireIndex)
+            {
+                connectedPlayers.Indexes.CreateOneAsync(Builders<ConnectedPlayer>.IndexKeys.Descending("DateCreated"), new CreateIndexOptions
+                {
+                    ExpireAfter = connectedPlayerExpirePeriod
                 });
             }
         }
-
 
         // Helper for game finding filter
         private FilterDefinition<Game> getFilter(string roomCode)
@@ -104,7 +136,7 @@ namespace SixJuice.Database
         {
             // Deletes game by setting is DateCreated field to a time such that its expiration will arrive in 2 minutes.
             // This way, it's still around for a moment if players want to go back to check the scores, but will disappear shortly.
-            var expireUpdate = Builders<Game>.Update.Set("DateCreated", DateTime.UtcNow.Subtract(expirePeriod).Add(TimeSpan.FromMinutes(2)));
+            var expireUpdate = Builders<Game>.Update.Set("DateCreated", DateTime.UtcNow.Subtract(gameExpirePeriod).Add(TimeSpan.FromMinutes(2)));
             await games.UpdateOneAsync(getFilter(roomCode), expireUpdate);
         }
         public async Task RemoveEmptyGame(string roomCode)
@@ -661,73 +693,39 @@ namespace SixJuice.Database
             if(game.Players.Where(p => !p.Done).Count() == 0)
             { // Game over
                 //Write names and tally normal cards, and note who has the most
-                List<string> names = new List<string>();
-                List<int> normalCards = new List<int>();
-                List<int> playersWithMostNCs = new List<int>();
-                int maxNCs = 0;
-                for (int i = 0; i < game.Players.Count; i++)
+                List<string> names = game.Players.Select(p => p.Name).ToList();
+                List<int> normalCards = game.Players.Select(p => p.NormalCards.Count).ToList();
+                int maxNCs = normalCards.Max();
+                bool multipleMaxNCs = normalCards.Where(n => n == maxNCs).Count() > 1;
+                List<int> pointCards = game.Players.Select(p => p.PointCards.Count).ToList();
+                List<int> scores = pointCards.Zip(normalCards, (p, n) => p + (n == maxNCs ? (multipleMaxNCs ? 1 : 2) : 0)).ToList();
+                int maxScores = scores.Max();
+                List<string> winners = names.Zip(scores, (n, s) =>
                 {
-                    names.Add(game.Players[i].Name);
-                    int count = game.Players[i].NormalCards.Count;
-                    normalCards.Add(count);
-                    if (count == maxNCs)
+                    if (s == maxScores)
                     {
-                        playersWithMostNCs.Add(i);
+                        return n;
                     }
-                    if (count > maxNCs)
+                    else
                     {
-                        playersWithMostNCs = new List<int>();
-                        playersWithMostNCs.Add(i);
-                        maxNCs = count;
+                        return "";
                     }
-                }
-                //Add normal card bonuses
-                List<int> normalCardBonuses = new List<int>();
-                bool justOne = playersWithMostNCs.Count == 1;
-                for (int i = 0; i < game.Players.Count; i++)
+                }).Where(s => !string.IsNullOrEmpty(s)).ToList();
+                //Rank players
+                List<int> ranks = new List<int>();
+                for (int j = 0; j < scores.Count; j++)
                 {
-                    if(normalCards[i] == maxNCs)
-                    {
-                        normalCardBonuses.Add(justOne ? 2 : 1);
-                    } else
-                    {
-                        normalCardBonuses.Add(0);
-                    }
-                }
-                //Tally points
-                List<int> pointCards = new List<int>();
-                for (int i = 0; i < game.Players.Count; i++)
-                {
-                    pointCards.Add(game.Players[i].PointCards.Count);
-                }
-                //Tally scores, and note who has the most
-                List<int> scores = new List<int>();
-                List<string> winners = new List<string>();
-                int maxPts = 0;
-                for (int i = 0; i < game.Players.Count; i++)
-                {
-                    int score = pointCards[i] + normalCardBonuses[i];
-                    scores.Add(score);
-                    if (score == maxPts)
-                    {
-                        winners.Add(names[i]);
-                    }
-                    if (score > maxPts)
-                    {
-                        winners = new List<string>();
-                        winners.Add(names[i]);
-                        maxPts = score;
-                    }
+                    ranks.Add(Enumerable.Range(0, scores.Count).Where(i => !ranks.Contains(i)).OrderBy(i => scores.ElementAt(i)).Last());
                 }
                 //Save and return results
                 var results = new Results
                 {
                     PlayerNames = names,
                     NormalCardCounts = normalCards,
-                    NormalCardBonuses = normalCardBonuses,
                     PointCardCounts = pointCards,
                     Scores = scores,
-                    Winners = winners
+                    Winners = winners,
+                    Ranks = ranks
                 };
                 var resultsUpdate = Builders<Game>.Update.Set("Results", results);
                 await games.UpdateOneAsync(getFilter(roomCode), resultsUpdate);
@@ -745,6 +743,7 @@ namespace SixJuice.Database
         {
             await connectedPlayers.InsertOneAsync(new ConnectedPlayer
             {
+                DateCreated = DateTime.UtcNow,
                 ConnectionId = connectionId,
                 PlayerName = playerName,
                 RoomCode = roomCode,

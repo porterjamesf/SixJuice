@@ -11,6 +11,7 @@ namespace SixJuice.Models
     {
         [BsonId]
         public ObjectId Id { get; set; }
+        public DateTime DateCreated { get; set; }
         public string ConnectionId { get; set; }
         public string PlayerName { get; set; }
         public string RoomCode { get; set; }

@@ -246,6 +246,8 @@
                 $('.rpl_outer').css({ "height": height / 2 + 1 });
                 $('#roomPlayerList > div').css({ "height": height });
 
+                landscapeYSave1 = y + heightOf("PlayerList");
+
                 setSize('#go', widthOf("Button"), heightOf("Button"));
                 x = isPortrait ? leftside : rightside;
                 y = isPortrait ? y + heightOf("PlayerList") + defaultMargin : landscapeYSave2;
@@ -254,7 +256,7 @@
 
                 setSize('#roomMessage', widthOf("Message"), heightOf("Message"));
                 x = leftside;
-                y += heightOf("Button") + defaultMargin;
+                y = (isPortrait ? y + heightOf("Button") : landscapeYSave1) + defaultMargin;
                 setPosition('#roomMessage', x, y);
                 $('#roomMessage').css({ "font-size": Math.min(maprange(isPortrait ? wid : wid / 2, 200, 450, 15, 20), maprange(hei * (isPortrait ? 1 : 1.35), 400, 700, 15, 20)) });
 
@@ -344,16 +346,20 @@
 
     //Room code validation
     oldtext = "";
-    $('#roomCodeValue').on("change keyup paste", function () {
-        text = $(this).val().toUpperCase();
+    validateRoomCode = function () {
+        text = $('#roomCodeValue').val().toUpperCase();
         if (/^[A-Z0-9]{0,4}$/.test(text)) {
-            $(this).val(text);
+            $('#roomCodeValue').val(text);
             oldtext = text;
         } else {
-            $(this).val(oldtext);
+            $('#roomCodeValue').val(oldtext);
         }
-        $('#joinButton').prop('disabled', $(this).val().length != 4);
+        $('#joinButton').prop('disabled', $('#roomCodeValue').val().length != 4);
+    }
+    $('#roomCodeValue').on("change keyup paste", function () {
+        validateRoomCode();
     });
+    validateRoomCode(); // Do one validation on load, for when we get here via Back with the input data cached
 
     //------------ ROOM ----------------
 

@@ -9,9 +9,9 @@ namespace SixJuice.Models
     {
         public List<string> PlayerNames { get; set; }
         public List<int> NormalCardCounts { get; set; }
-        public List<int> NormalCardBonuses { get; set; }
         public List<int> PointCardCounts { get; set; }
         public List<int> Scores { get; set; }
         public List<string> Winners { get; set; }
+        public List<int> Ranks { get; set; }
     }
 }
