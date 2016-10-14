@@ -18,7 +18,7 @@
             $('#waitList').empty();
             for (var i = 0; i < playerInfo.length; i++) {
                 if (!playerInfo[i].ready) {
-                    $('#waitList').append('<span class="smallText spiv">'.concat(playerInfo[i].playerName, '</span>'));
+                    $('#waitList').append('<div class="smallText">'.concat(playerInfo[i].playerName, '</div>'));
                     allReady = false;
                 }
             }
@@ -367,8 +367,6 @@
         setSize('.pButton', kButtonWidth, buttonheights[size]);
         setPosition('.kButton', calcedKBarWidth + standardmargins[size], (deckheights[size] - buttonheights[size]) / 2);
         $('.kCardBar').css("width", calcedKBarWidth);
-        $('.kPlayerChooser').css("width", kButtonWidth);
-        $('#kPlayerMenu').css("left", calcedKBarWidth + standardmargins[size] - 10);
 
         drawables.forEach(function (drawable, index) {
             drawable.redraw();
@@ -392,7 +390,7 @@
             setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
         }
         if ($('#kPlayerMenu').css("display") != "none") {
-            $('#kPlayerMenu').css("top", (deckheights[size] - buttonheights[size]) / 2 - $('#kPlayerMenu').height() - 10);
+        	sizeKingPlayerChooser();
         }
 
         //Show page after first resize
@@ -400,6 +398,25 @@
             $(".SJBody").show();
             firstSizeEvent = false;
         }
+    }
+    sizeKingPlayerChooser = function () {
+    	if ($('#kPlayerDrop').offset().top > $('#kingContent').innerHeight()) { // Ask button scrolls out of view
+    		$('#kPlayerMenu').hide();
+    		return;
+    	}
+    	var askButtonRectangle = $('#kPlayerDrop')[0].getBoundingClientRect();
+    	$('#kPlayerMenu').css("height", "auto");
+    	$('#kPlayerMenu').css("top", askButtonRectangle.top - $('#kPlayerMenu').height() - 10);
+    	$('#kPlayerMenu').css("left", askButtonRectangle.left);
+
+    	if ($('#kPlayerMenu')[0].getBoundingClientRect().top < 0) {
+    		$('#kPlayerMenu').css("height", askButtonRectangle.top - 10);
+    		$('#kPlayerMenu').css("top", 0);
+    		$('.kPlayerChooser').css("width", kButtonWidth + 17); // for scroll bar
+    	} else {
+    		$('.kPlayerChooser').css("width", kButtonWidth);
+    	}
+
     }
     calculateKingAndPlayerWidths = function () {
         $('.king').css("top", deckmargins[size] + rowmargins[size]);
@@ -1926,6 +1943,7 @@
             history.pushState({ srn: "Game", rc: roomCode, sub: "king" }, "Game - " + roomCode, window.location);
             clearActions();
             $('.kingOverlay').show();
+            $('.kingPlayerChooserOverlay').show();
             return true;
         }
         return false;
@@ -1933,6 +1951,7 @@
     hideKingOverlay = function () {
         if (!$('.kingOverlay')[0].hidden) {
             $('.kingOverlay').hide();
+            $('.kingPlayerChooserOverlay').hide();
             e('kPlayerMenu').hide();
             updateActions();
             return true;
@@ -2180,7 +2199,7 @@
                         if ($('#kPlayerMenu').css("display") == "none") {
                             $('#kPlayerMenu').show();
                             //Done on show instead of on resize because the element doesn't have height yet on first resize
-                            $('#kPlayerMenu').css("top", (deckheights[size] - buttonheights[size]) / 2 - $('#kPlayerMenu').height() - 10);
+                            sizeKingPlayerChooser();
                         } else {
                             $('#kPlayerMenu').hide();
                         }
@@ -2224,6 +2243,11 @@
         });
         $('#kingContent').on('click', function () {
             setTimeout(kingOverlayInnerClick, 3);
+        });
+        $('#kingContent').on('scroll', function () {
+        	if ($('#kPlayerMenu').css("display") != "none") {
+        		sizeKingPlayerChooser();
+        	}
         });
     });
 });

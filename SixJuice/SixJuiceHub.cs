@@ -14,13 +14,16 @@ namespace SixJuice
     {
         public static IDatabaseHelper _db = new MongoDBHelper();
 
+        public int RoomPlayerLimit = 12; // Maximum number of players in a room. 12 is the most that can play with 1 deck (full deck is dealt out).
+                                        //  For more decks, add 13 players per deck (25, 38, etc...)
+
 		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
 		private bool mock = true;
 		private List<Card> player1Hand = (new Card[] {
-			new Card { number = 12, suit = "spades", additional = "deck0" },
+			new Card { number = 13, suit = "hearts", additional = "deck0" },
 			new Card { number = 11, suit = "clubs", additional = "deck0" },
 			new Card { number = 9, suit = "spades", additional = "deck0" },
-			new Card { number = 8, suit = "spades", additional = "deck1" }
+			new Card { number = 7, suit = "spades", additional = "deck1" }
 		}).ToList();
 		private List<Card> player2Hand = (new Card[] {
 			new Card { number = 11, suit = "clubs", additional = "deck1" },
@@ -38,7 +41,7 @@ namespace SixJuice
 			new Card { number = 1, suit = "spades", additional = "deck0" },
 			new Card { number = 2, suit = "spades", additional = "deck1" },
 			new Card { number = 3, suit = "spades", additional = "deck0" },
-			new Card { number = 5, suit = "spades", additional = "deck0" }
+			new Card { number = 6, suit = "spades", additional = "deck0" }
 		}).ToList();
 		private bool AreEqual(Card card1, Card card2)
 		{
@@ -65,8 +68,8 @@ namespace SixJuice
         }
 
         //From Index - Finds game. If game hasn't started, this simply
-        // checks what player name to assign and does callback to
-        // trigger navigation to Room
+        // checks if there's room and what player name to assign and does
+        // callback to trigger navigation to Room
         // If game has started and there are missing players, triggers
         // nagivation to screen to select player to be.
         // If game has started and there are no missing players, displays
@@ -78,6 +81,11 @@ namespace SixJuice
                 if (game.Turn == -1)
                 {
                     var playerList = game.Players.Select(p => p.Name);
+                    if(playerList.Count() >= RoomPlayerLimit)
+                    {
+                        Clients.Caller.errorMessage("This game has the maximum number of players.");
+                        return;
+                    }
                     int i = 1;
                     string name = "Player1";
                     while (playerList.Contains(name))
@@ -91,7 +99,7 @@ namespace SixJuice
                 List<Player> missingPlayers = game.Players.Where(p => !p.Ready).ToList();
                 if (missingPlayers.Count == 0)
                 {
-                    Clients.Caller.errorMessage("This game is full.");
+                    Clients.Caller.errorMessage("All players in this game are already present.");
                     return;
                 }
                 Clients.Caller.goToRejoin(roomCode);

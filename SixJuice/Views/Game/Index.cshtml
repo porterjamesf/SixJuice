@@ -37,9 +37,12 @@
         <div class="kLabel">From another player:</div>
         <div id="kPlayer" class="boardrow">
             <span id="kPlayerCards" class="cardBar kCardBar"></span>
-            <div id="kPlayerMenu" class="kPlayerChooser" style="display:none"></div>
+            @*<div id="kPlayerMenu" class="kPlayerChooser" style="display:none"></div>*@
             <button id="kPlayerDrop" class="kButton">Ask...</button>
         </div>
+    </div>
+    <div class="kingPlayerChooserOverlay" style="display:none">
+        <div id="kPlayerMenu" class="kPlayerChooser" style="display:none"></div>
     </div>
 </div>
 <div class="notYourTurn overlay">
@@ -57,7 +60,7 @@
 <div id="wait" class="waitOverlay overlay">
     <div class="overlayContent">
         <div class="medText">Waiting for players:</div>
-        <span id="waitList"></span>
+        <div id="waitList"></div>
 
     </div>
 </div>

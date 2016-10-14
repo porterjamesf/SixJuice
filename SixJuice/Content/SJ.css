@@ -28,14 +28,6 @@ button {
     padding: 5px;
 }
 
-.wide {
-    width: 100%;
-}
-
-.tall {
-    height: 100%;
-}
-
 .errorText {
     color: #aa0000;
 }
@@ -147,6 +139,14 @@ button {
     cursor: pointer;
 }
 
+.wide {
+    width: 100%;
+}
+
+.tall {
+    height: 100%;
+}
+
 /* Kings overlay */
 
 #kingContent {
@@ -166,6 +166,7 @@ button {
     background-color: #A0A0A0;
     z-index: 1;
     pointer-events: visible;
+	overflow-y: auto;
 }
 
 .kClose {
@@ -174,6 +175,11 @@ button {
     border: 1px solid black;
     border-radius: 10%;
     padding: 10px;
+}
+
+.kingPlayerChooserOverlay {
+    pointer-events: none;
+    position: absolute;
 }
 
 .kButton {
