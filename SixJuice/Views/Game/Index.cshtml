@@ -37,7 +37,6 @@
         <div class="kLabel">From another player:</div>
         <div id="kPlayer" class="boardrow">
             <span id="kPlayerCards" class="cardBar kCardBar"></span>
-            @*<div id="kPlayerMenu" class="kPlayerChooser" style="display:none"></div>*@
             <button id="kPlayerDrop" class="kButton">Ask...</button>
         </div>
     </div>
@@ -49,19 +48,19 @@
     <div id="MrFlibbleSays" class="gameOver bigText" style="display:none">Game Over</div>
     <div class="winner" style="display:none">
         <div class="winnerHeadline medText">PlayerX wins</div>
-        <div class="goRowH">
+        <div id="winnerTableLabels" class="goRowH">
             <span class="smallText goReadout goCol1H" id="goName"><span style="font-style:oblique">Name</span></span>
             <span class="smallText goReadout goCol2H" id="goNrml" style="font-style:oblique; text-align:center">Normal Cards</span>
             <span class="smallText goReadout goCol3H" id="goPnts"><span style="font-style:oblique">Point Cards</span></span>
             <span class="smallText goReadout goCol4H" id="goScre"><span style="font-style:oblique">Score</span></span>
         </div>
+		<div id="playerResultList"></div>
     </div>
 </div>
 <div id="wait" class="waitOverlay overlay">
     <div class="overlayContent">
         <div class="medText">Waiting for players:</div>
         <div id="waitList"></div>
-
     </div>
 </div>
 <div class="actionButtonOverlay">

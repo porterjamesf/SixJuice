@@ -18,7 +18,7 @@ namespace SixJuice
                                         //  For more decks, add 13 players per deck (25, 38, etc...)
 
 		// Seed values. Use these to test with specific deal-outs. Set mock to false to ignore.
-		private bool mock = true;
+		private bool mock = false;
 		private List<Card> player1Hand = (new Card[] {
 			new Card { number = 13, suit = "hearts", additional = "deck0" },
 			new Card { number = 11, suit = "clubs", additional = "deck0" },
@@ -63,7 +63,6 @@ namespace SixJuice
 		public async Task NewGame()
         {
             var roomCode = await _db.CreateGame();
-			//await _db.UpdateDeckCount(roomCode, 2); //----------------------------------------------------FOR TESTING
             Clients.Caller.goToRoomAs(roomCode, "Player1");
         }
 

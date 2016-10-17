@@ -328,6 +328,12 @@ button {
     border-radius: 3px;
 }
 
+#playerResultList {
+	overflow-y: auto;
+	position: absolute;
+	pointer-events: visible;
+}
+
 /* Start screen */
 
 #startPane > * {

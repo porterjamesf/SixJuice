@@ -1,4 +1,7 @@
 ﻿$(function () {
+	// -------- Constants -----------
+	queenCountDownDelay = 1000;
+	queenDefaultTime = 15;
 
     //------------------------------------------
     //      PAGE & PLAYER MANAGEMENT
@@ -317,6 +320,8 @@
         e('goName').css("height", goLabelHeight);
         e('goPnts').css("height", goLabelHeight);
         e('goScre').css("height", goLabelHeight);
+        //e('playerResultList').css("height", hei - e('playerResultList')[0].getBoundingClientRect().top);
+
 
         setSize('.gameboard', width, height);
         $('.gameboard').css("padding", pagemargins[size]);
@@ -348,7 +353,12 @@
         $('.cardBar').css("height", cardheights[size]);
         $('.boardrow').css("height", deckheights[size]);
         $('.boardrow').css("padding", rowmargins[size]);
-        //Set element positions
+
+    	//Set element positions
+        var playerResultsY = parseInt($('.winnerHeadline').css("height").replace('px', '')) + goLabelHeight + standardmargins[size] * 2; //Under column names
+        e("playerResultList").css("top", playerResultsY);
+        setSize("#playerResultList", width, height / 2 - playerResultsY);
+
         var xcursor = rowmargins[size] + deckwidths[size] + standardmargins[size]; //After 1 deck
         e('table').css("left", xcursor);
         $('.pointCardPile').css("left", xcursor);
@@ -387,7 +397,7 @@
 
         //Player menu positions
         if (e('josPlayerMenu').css("display") != "none") {
-            setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
+        	sizeJosPlayerChooser();
         }
         if ($('#kPlayerMenu').css("display") != "none") {
         	sizeKingPlayerChooser();
@@ -406,17 +416,25 @@
     	}
     	var askButtonRectangle = $('#kPlayerDrop')[0].getBoundingClientRect();
     	$('#kPlayerMenu').css("height", "auto");
-    	$('#kPlayerMenu').css("top", askButtonRectangle.top - $('#kPlayerMenu').height() - 10);
-    	$('#kPlayerMenu').css("left", askButtonRectangle.left);
+    	setPosition('#kPlayerMenu', askButtonRectangle.left, askButtonRectangle.top - $('#kPlayerMenu').height() - 10);
 
     	if ($('#kPlayerMenu')[0].getBoundingClientRect().top < 0) {
-    		$('#kPlayerMenu').css("height", askButtonRectangle.top - 10);
+    		setSize('#kPlayerMenu', kButtonWidth + 17, askButtonRectangle.top - 10);
     		$('#kPlayerMenu').css("top", 0);
-    		$('.kPlayerChooser').css("width", kButtonWidth + 17); // for scroll bar
     	} else {
-    		$('.kPlayerChooser').css("width", kButtonWidth);
+    		$('#kPlayerMenu').css("width", kButtonWidth);
     	}
+    }
+    sizeJosPlayerChooser = function () {
+    	$('#josPlayerMenu').css("height", "auto");
+    	setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
 
+    	if ($('#josPlayerMenu')[0].getBoundingClientRect().top < 0) {
+    		setSize('#josPlayerMenu', kButtonWidth + 17, e('Use').offset().top - 10);
+    		$('#josPlayerMenu').css("top", 0);
+    	} else {
+    		$('#josPlayerMenu').css("width", kButtonWidth);
+    	}
     }
     calculateKingAndPlayerWidths = function () {
         $('.king').css("top", deckmargins[size] + rowmargins[size]);
@@ -495,7 +513,7 @@
             clearActions();
             //Generate lines in game over readout
             for (var i = 0; i < gameResults.Ranks.length; i++) {
-                $('.winner').append('<div id="' + gameResults.PlayerNames[gameResults.Ranks[i]] + 'readout" class="goRow">' +
+                $('#playerResultList').append('<div id="' + gameResults.PlayerNames[gameResults.Ranks[i]] + 'readout" class="goRow">' +
                     '<span class="smallText goReadoutData goCol1">' + gameResults.PlayerNames[gameResults.Ranks[i]] + '</span>' +
                     '<span class="smallText goReadoutData goCol2">' + gameResults.NormalCardCounts[gameResults.Ranks[i]] + '</span>' +
                     '<span class="smallText goReadoutData goCol3">' + gameResults.PointCardCounts[gameResults.Ranks[i]] + '</span>' +
@@ -1260,7 +1278,8 @@
             e("kTable").show();
         }
         if (kPlayer.cardList.length == 0) {
-            e("kPlayer").hide();
+        	e("kPlayer").hide();
+        	e("kPlayerMenu").hide();
         } else {
             e("kPlayer").show();
         }
@@ -1270,14 +1289,14 @@
     // Starts a queen count down from the beginning
     hub.client.qcd = function (useQga) {
         var qga = JSON.parse(useQga);
-        startQueenCountDown(qga.playerName.split("&"), qga.hand, 15, false);
+        startQueenCountDown(qga.playerName.split("&"), qga.hand, queenDefaultTime - 1, false);
     }
     // ResQ - Queen count down resume; This is sent by other clients (bounced off server) when a reconnect occurs during
     // a queen count down. For players still connected and counting down, this simply resumes (and aligns count). For the
     // reconnecting player (who is not counting down), this starts the count down. If the reconnecting player is the one
     // who played the queen, incoming resQ events from other players updates the internal OK list
     hub.client.resQ = function (count, queenAndJacks, queenAndJackPlayers, nonOks) {
-        if (playedQueensAndJacks.length == 0) { // This client is not counting, so it must be the reconnecting one
+    	if (playedQueensAndJacks.length == 0) { // This client is not counting, so it must be the reconnecting one
             if (queenAndJackPlayers[0] == playerName) {
                 startQueenCountDown(queenAndJackPlayers, queenAndJacks, count, false);
             } else {
@@ -1289,9 +1308,9 @@
             queenCount = count;
             queenPause = false;
         }
-        if (queenAndJackPlayers[0] == playerName) { // Update the OK list for the queen/last jack player
-            if (nonOks[0] == "ok" && nonOks.length == 2) {
-                okq(nonOks[1]);
+    	if (queenAndJackPlayers[0] == playerName) { // Update the OK list for the queen/last jack player
+    		if (nonOks[0] == "ok" && nonOks.length == 2) {
+            	okq(nonOks[1]);
             }
         }
     }
@@ -1299,6 +1318,7 @@
     // needs to OK the queen or not. The other players get buttons for OKing (or playing the Jack of clubs). All players
     // schedule the count down. When the count runs out, anyone who hasn't will automatically send an OK.
     startQueenCountDown = function (queenPlayers, queensAndJacks, timerCount, isOKd) {
+    	console.log("Starting QCD with count: " + timerCount);
         $('#jack').hide();
         $('#nojack').hide();
         queenJocPlayers = queenPlayers;
@@ -1337,6 +1357,8 @@
         queenCount = timerCount;
         playedQueensAndJacks = queensAndJacks;
         queenPause = false;
+        $('#count').text(queenCount + 1);
+        clearInterval(queenTimer);
         queenTimer = setInterval(function () {
             if (!queenPause) {
                 $('#count').text(queenCount);
@@ -1344,14 +1366,14 @@
                     if (!queenOK) {
                         $('#jack').hide();
                         $('#nojack').hide();
-                        hub.server.okQueen(roomCode, playerName);
+                        hub.server.okQueen(roomCode, playerName, queenJocPlayers[0]);
                     }
                     clearInterval(queenTimer);
                 } else {
                     queenCount -= 1;
                 }
             }
-        }, 1000000);
+        }, queenCountDownDelay);
         //If hand has no cards, send OK automatically
         if (hand.cardList.length == 0) {
             clickOKQ();
@@ -1363,9 +1385,6 @@
         for (var i = queenJocPlayers.length - 1; i >= 0; i--) {
             text = text + "<br>" + (queenJocPlayers[i] == playerName ? "P" : queenJocPlayers[i] + " is p") + "laying a " + (i == queenJocPlayers.length - 1 ? "Queen" : "Jack of Clubs") + "...";
         }
-    	//queenJocPlayers.forEach(function (player, index) {
-    	//	text = text + "<br>" + (player == playerName ? "P" : player + " is p") + "laying a " + (index == 0 ? "Queen" : "Jack of Clubs") + "...";
-    	//});
     	$('#sweeper').html(text);
     }
 
@@ -1685,21 +1704,11 @@
                         hand.pushCard(getCardId(pga.table[j].number, pga.table[j].suit, pga.table[j].additional));
                         drawpile.popCard();
                     }
-                    //Updating kSources
-                    //kSourceHand = [];
                     kSourceHand = hand.cardList.slice(0);
                     kSourceTable = [];
-                    //hand.cardList.forEach(function (cardId, index) {
-                    //    kSourceHand.push(cardId);
-                    //});
                     table.cardList.forEach(function (cardId, index) {
                         kSourceTable.push(cardId);
                     });
-                    //Updating askedfor matrix
-                    //askedfor = [];
-                    //otherPlayers.forEach(function (a, b) {
-                    //    askedfor.push([]);
-                    //});
                     updateKingsOverlay();
                     updateAskEnablement();
                 } else {
@@ -1710,10 +1719,7 @@
                                 drawpile.popCard();
                             }
                             if (pga.table.length > 0) {
-                                console.log("Clearing af[] for " + otherPlayers[i].name);
                                 askedfor[i] = [];
-                            } else {
-                                console.log("No cards drawn by " + otherPlayers[i].name);
                             }
                         }
                     }
@@ -1883,7 +1889,6 @@
             kPlayer.getSelected(true).forEach(function (cardId, index) {
                 if (askedfor[ind].indexOf(getCardNumber(cardId)) == -1) {
                     askedfor[ind].push(getCardNumber(cardId));
-                    console.log("Adding " + getCardNumber(cardId) + " to askedfor for " + otherPlayers[ind].name);
                 }
             });
             updateAskEnablement();
@@ -2059,9 +2064,9 @@
                         }
                         //Choose player with menu
                         $('#josPlayerMenu button').show();
-                        setPosition('#josPlayerMenu', e('Use').offset().left, e('Use').offset().top - $('#josPlayerMenu').height() - 10);
                         if (e('josPlayerMenu').css("display") == "none") {
-                            e('josPlayerMenu').show();
+                        	e('josPlayerMenu').show();
+                        	sizeJosPlayerChooser();
                         } else {
                             e('josPlayerMenu').hide();
                         }
@@ -2243,6 +2248,9 @@
         });
         $('#kingContent').on('click', function () {
             setTimeout(kingOverlayInnerClick, 3);
+        });
+        $('#kPlayerMenu').on('click', function () {
+        	setTimeout(kingOverlayInnerClick, 3);
         });
         $('#kingContent').on('scroll', function () {
         	if ($('#kPlayerMenu').css("display") != "none") {
