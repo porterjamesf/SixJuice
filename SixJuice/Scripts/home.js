@@ -1,5 +1,5 @@
 ﻿$(function () {
-    hub = $.connection.sixJuiceHub;
+	hub = $.connection.sixJuiceHub;
     screen = "start"; //changes to "room" or "rejoin"
     roomCode = "";
     playerName = "";
@@ -7,6 +7,7 @@
     ready = false;
     decks = 1
     starting = false;     //just a flag so that the disconnects that happen on start won't visually change player statuses
+    firstPlayerListLoad = true;	// flag to read the # of decks value on only the first load of the room page
 
     $('#setName').prop('disabled', false);
     $('#name').prop('disabled', false);
@@ -319,8 +320,17 @@
         $('#name').val(playerName);
 
         hub.server.joinRoomAs(roomCode, playerName);
-        data = { text: "rl" };
+        //data = { text: "rl" };
         history.pushState({ screen: "room", rc: roomCode }, "Rooom ".concat(roomCode), window.location);
+        console.log(parseInt($('#decks').val()));
+
+        var cookies = document.cookie;
+        var playerNameIndex = cookies.indexOf("playerName=");
+        if (playerNameIndex >= 0) {
+        	var newName = cookies.substring(playerNameIndex + 11).split(';')[0];
+        	changeName(newName);
+        }
+
     }
 
     //Callback for error during room joining on server side
@@ -375,35 +385,55 @@
             setDecksDDLEnablement(!ready);
             resize(window.innerWidth, window.innerHeight);
             message("", false);
+
+			// On first player list load, any cached value for the # of decks field is readas
+            if (firstPlayerListLoad && playerInfo[0].playerName == playerName) {
+            	firstPlayerListLoad = false;
+            	if (parseInt($('#decks').val()) != 1) {
+            		changeDecks();
+            	}
+            }
         }
+    }
+
+    changeName = function (newname) {
+    	if (newname == 'ok' || newname == '&') {
+    		message('Name cannot be "' + newname + '"', true);
+    	} else {
+    		message("Changing name...", false);
+    		hub.server.changeName(roomCode, newname);
+    	}
+    }
+
+    hub.client.nameChangeCallback = function (name, fail) {
+    	if (fail) {
+    		message("The name ".concat(name, " is already taken."), true);
+    	} else {
+    		playerName = name;
+    		$('#name').val(name);
+    		document.cookie = "playerName=" + name;
+    	}
     }
 
     setDecksDDLEnablement = function (enable) {
-        if (!enable || playerInfo[0].playerName != playerName) {
-            $('#decks').prop('disabled', true);
-        } else {
-            $('#decks').prop('disabled', false);
-        }
+    	if (!enable || playerInfo[0].playerName != playerName) {
+    		$('#decks').prop('disabled', true);
+    	} else {
+    		$('#decks').prop('disabled', false);
+    	}
     }
 
-    //Callback for validation of name change
-    hub.client.nameChangeCallback = function (name, fail) {
-        if (fail) {
-            message("The name ".concat(name, " is already taken."), true);
-        } else {
-            playerName = name;
-        }
+    changeDecks = function (newDeckCount) {
+    	if (playerInfo != null && playerInfo[0].playerName == playerName) {
+    		decks = parseInt($('#decks').val());
+    		hub.server.updateDeckCount(roomCode, decks);
+    	}
     }
 
-    //Called on selecting a value from the Decks DDL
-    updateDeckCount = function () {
-        decks = parseInt($('#decks').val());
-        hub.server.updateDeckCount(roomCode, decks);
-    }
     hub.client.sendUpdatedDeckCount = function (newCount) {
-        if (playerInfo != null && playerInfo[0].playerName != playerName) {
-            $('#decks').val(newCount);
-        }
+    	if (playerInfo != null && playerInfo[0].playerName != playerName) {
+    		$('#decks').val(newCount);
+    	}
     }
 
     //Called on pushing READY - changes page element states and informs server
@@ -551,13 +581,7 @@
         });
 
         $('#setName').click(function () {
-            newname = $('#name').val();
-            if (newname == 'ok' || newname == '&') {
-                message('Name cannot be "' + newname + '"', true);
-            } else {
-                message("Changing name...", false);
-                hub.server.changeName(roomCode, $('#name').val());
-            }
+            changeName($('#name').val());            
         });
 
         $('#go').click(function () {
@@ -569,9 +593,7 @@
         });
 
         $('#decks').change(function () {
-            if (playerInfo != null && playerInfo[0].playerName == playerName) {
-                updateDeckCount();
-            }
+        	changeDecks();
         });
 
         $('#rejoinPlayerList').on('click', 'button', function () {

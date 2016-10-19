@@ -1318,7 +1318,6 @@
     // needs to OK the queen or not. The other players get buttons for OKing (or playing the Jack of clubs). All players
     // schedule the count down. When the count runs out, anyone who hasn't will automatically send an OK.
     startQueenCountDown = function (queenPlayers, queensAndJacks, timerCount, isOKd) {
-    	console.log("Starting QCD with count: " + timerCount);
         $('#jack').hide();
         $('#nojack').hide();
         queenJocPlayers = queenPlayers;

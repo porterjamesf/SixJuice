@@ -13,7 +13,7 @@ namespace SixJuice.Controllers
         {
             ViewBag.RoomCode = roomCode;
             ViewBag.PlayerName = playerName;
-            return View();
+			return View();
         }
     }
 }
